@@ -63,7 +63,6 @@ function updateDecisionInBody(
   const result: string[] = [];
   
   let inTargetDecision = false;
-  let foundId = false;
   
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
@@ -71,13 +70,11 @@ function updateDecisionInBody(
     // Check for decision section start
     if (line.match(/^## Decision \d+:/)) {
       inTargetDecision = false;
-      foundId = false;
     }
     
     // Check if this is our target decision
     if (line.trim().startsWith('id:') && line.includes(decisionId)) {
       inTargetDecision = true;
-      foundId = true;
     }
     
     // Update status line

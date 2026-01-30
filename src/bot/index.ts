@@ -2,7 +2,7 @@
  * Telegram bot setup and initialization
  * 
  * This module sets up the Telegraf bot with:
- * - Command handlers (/start, /queue)
+ * - Command handlers (/start, /queue, /help)
  * - Callback query handlers (button presses)
  * - Authorization middleware
  * - Error handling
@@ -10,20 +10,25 @@
 
 import { Telegraf } from 'telegraf';
 import type { ArbiterConfig } from '../types.js';
+import type { QueueManager } from '../queue/index.js';
+import { buildQueueView, buildEmptyQueueView } from './views/index.js';
+import { buildQueueKeyboard } from './keyboards.js';
+import { createCallbackRouter } from './callbacks.js';
 
 /**
  * Create and configure the Telegraf bot
  * @param config - Arbiter configuration
+ * @param queueManager - Queue manager instance
  * @returns Configured Telegraf bot instance
  */
-export function createBot(config: ArbiterConfig): Telegraf {
+export function createBot(config: ArbiterConfig, queueManager: QueueManager): Telegraf {
   const bot = new Telegraf(config.telegram.token);
 
   // Authorization middleware - only allow configured users
   bot.use(async (ctx, next) => {
     const userId = ctx.from?.id;
     if (!userId || !config.telegram.allowedUsers.includes(userId)) {
-      console.log(`Unauthorized access attempt from user: ${userId}`);
+      console.log(`[Bot] Unauthorized access attempt from user: ${userId}`);
       await ctx.reply('⛔ Unauthorized. This bot is private.');
       return;
     }
@@ -32,46 +37,78 @@ export function createBot(config: ArbiterConfig): Telegraf {
 
   // Error handling middleware
   bot.catch((err, ctx) => {
-    console.error(`Error for ${ctx.updateType}:`, err);
+    console.error(`[Bot] Error for ${ctx.updateType}:`, err);
     ctx.reply('❌ An error occurred. Please try again.').catch(console.error);
   });
 
   // /start command
   bot.command('start', async (ctx) => {
+    // Check for deep link parameter (e.g., /start plan_abc123)
+    const args = ctx.message.text.split(' ').slice(1);
+    
+    if (args.length > 0 && args[0].startsWith('plan_')) {
+      const planId = args[0].slice(5);
+      const plan = queueManager.getPlan(planId);
+      
+      if (plan) {
+        const { buildPlanView } = await import('./views/index.js');
+        const { buildPlanKeyboard } = await import('./keyboards.js');
+        
+        await ctx.reply(buildPlanView(plan), {
+          parse_mode: 'Markdown',
+          reply_markup: buildPlanKeyboard(plan).reply_markup,
+        });
+        return;
+      }
+    }
+
     await ctx.reply(
-      '👋 **Welcome to Arbiter Zebu!**\n\n' +
-      'I help you make decisions for your AI agents.\n\n' +
-      'Commands:\n' +
+      '👋 *Welcome to Arbiter Zebu!*\n\n' +
+      'I help you make decisions for your AI agents\\.\n\n' +
+      '*Commands:*\n' +
       '/queue — View pending decisions\n' +
-      '/help — Show this message',
-      { parse_mode: 'Markdown' }
+      '/help — Show this message\n\n' +
+      '_No AI processing — your button taps are instant\\! ⚡_',
+      { parse_mode: 'MarkdownV2' }
     );
   });
 
   // /help command
   bot.command('help', async (ctx) => {
     await ctx.reply(
-      '📚 **Arbiter Zebu Help**\n\n' +
-      '**Commands:**\n' +
+      '📚 *Arbiter Zebu Help*\n\n' +
+      '*Commands:*\n' +
       '/queue — View pending decision queue\n' +
       '/help — Show this help message\n\n' +
-      '**How it works:**\n' +
-      '1. Agents push decisions to the queue\n' +
-      '2. You review and answer via buttons\n' +
-      '3. Agents receive your decisions\n\n' +
-      'No AI processing — your button taps are instant! ⚡',
-      { parse_mode: 'Markdown' }
+      '*How it works:*\n' +
+      '1\\. Agents push decisions to the queue\n' +
+      '2\\. You review and answer via buttons\n' +
+      '3\\. Agents receive your decisions\n\n' +
+      '_No AI processing — your button taps are instant\\! ⚡_',
+      { parse_mode: 'MarkdownV2' }
     );
   });
 
-  // /queue command - placeholder
+  // /queue command - Show queue with inline keyboard
   bot.command('queue', async (ctx) => {
-    await ctx.reply(
-      '📋 **Decision Queue**\n\n' +
-      '_Queue viewer coming soon..._',
-      { parse_mode: 'Markdown' }
-    );
+    const plans = queueManager.getPending();
+    const stats = queueManager.getStats();
+
+    if (plans.length === 0) {
+      await ctx.reply(buildEmptyQueueView(), {
+        parse_mode: 'Markdown',
+        reply_markup: buildQueueKeyboard([]).reply_markup,
+      });
+    } else {
+      await ctx.reply(buildQueueView(plans, stats), {
+        parse_mode: 'Markdown',
+        reply_markup: buildQueueKeyboard(plans).reply_markup,
+      });
+    }
   });
+
+  // Callback query handler (button presses)
+  bot.on('callback_query', createCallbackRouter(queueManager));
 
   return bot;
 }
@@ -84,7 +121,7 @@ export async function startBot(bot: Telegraf): Promise<void> {
   process.once('SIGINT', () => bot.stop('SIGINT'));
   process.once('SIGTERM', () => bot.stop('SIGTERM'));
 
-  console.log('🚀 Starting Arbiter Zebu bot...');
+  console.log('[Bot] Starting Arbiter Zebu...');
   await bot.launch();
-  console.log('✅ Bot is running!');
+  console.log('[Bot] ✅ Bot is running!');
 }

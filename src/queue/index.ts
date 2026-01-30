@@ -243,7 +243,7 @@ export class QueueManager {
     console.log(`[Queue] Plan completed: ${plan.frontmatter.id}`);
 
     // Move to completed directory
-    const { newPath } = await completePlan(plan.filePath, this.completedDir);
+    await completePlan(plan.filePath, this.completedDir);
     
     // Remove from cache
     this.cache.delete(plan.filePath);
