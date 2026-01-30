@@ -76,13 +76,18 @@ export function buildDecisionKeyboard(
   }
   buttons.push(navButtons);
   
-  // Option buttons - arrange in rows of 2-3
-  const optionButtons = decision.options.map(option =>
-    Markup.button.callback(
-      option.charAt(0).toUpperCase() + option.slice(1),
+  // Option buttons - show letter keys (A, B, C, ...)
+  // Show checkmark on previously selected option
+  const optionButtons = decision.options.map((option, i) => {
+    const letter = String.fromCharCode(65 + i); // A, B, C, ...
+    const isSelected = decision.answer === option;
+    const buttonText = isSelected ? `✓ ${letter}` : letter;
+    
+    return Markup.button.callback(
+      buttonText,
       `answer:${plan.frontmatter.id}:${decision.id}:${option}`
-    )
-  );
+    );
+  });
 
   // Arrange options in rows of 3
   for (let i = 0; i < optionButtons.length; i += 3) {
