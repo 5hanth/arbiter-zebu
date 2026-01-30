@@ -122,6 +122,12 @@ export function createCallbackRouter(queueManager: QueueManager) {
 async function handleQueueView(ctx: CallbackContext, queueManager: QueueManager) {
   await ctx.answerCbQuery();
   
+  // Clear any pending custom input state
+  const userId = ctx.from?.id;
+  if (userId) {
+    sessionStore.clearCustomInputState(userId);
+  }
+  
   const plans = queueManager.getPending();
   const stats = queueManager.getStats();
 
@@ -165,6 +171,12 @@ async function handleOpenPlan(ctx: CallbackContext, queueManager: QueueManager, 
  */
 async function handleStartReview(ctx: CallbackContext, queueManager: QueueManager, planId: string) {
   await ctx.answerCbQuery();
+  
+  // Clear any pending custom input state (e.g., if user pressed Cancel)
+  const userId = ctx.from?.id;
+  if (userId) {
+    sessionStore.clearCustomInputState(userId);
+  }
   
   const plan = queueManager.getPlan(planId);
   
