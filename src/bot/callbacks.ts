@@ -5,8 +5,9 @@
  */
 
 import type { Context, NarrowedContext } from 'telegraf';
-import type { Update, CallbackQuery } from 'telegraf/types';
+import type { Update, CallbackQuery, Message } from 'telegraf/types';
 import type { QueueManager } from '../queue/index.js';
+import { sessionStore } from './session.js';
 import {
   buildQueueView,
   buildEmptyQueueView,
@@ -332,10 +333,121 @@ async function handleCustomPrompt(
     return;
   }
 
-  // Store state for custom input handling
-  // For now, just show the prompt - custom input will need session state
+  // Store session state for custom input handling
+  const userId = ctx.from?.id;
+  const messageId = ctx.callbackQuery.message?.message_id;
+  
+  if (userId && messageId) {
+    sessionStore.setCustomInputState(userId, {
+      planId,
+      decisionId,
+      messageId,
+    });
+  }
+
   await ctx.editMessageText(buildCustomInputView(plan, decision), {
     parse_mode: 'Markdown',
     reply_markup: buildCustomInputKeyboard(planId, decisionId).reply_markup,
   });
+}
+
+/**
+ * Handle custom text input from user
+ * Called when user sends a text message while in custom input mode
+ */
+export async function handleCustomTextInput(
+  ctx: Context,
+  queueManager: QueueManager
+): Promise<boolean> {
+  const userId = ctx.from?.id;
+  if (!userId) return false;
+
+  // Check if user is awaiting custom input
+  const state = sessionStore.getCustomInputState(userId);
+  if (!state) return false;
+
+  // Get the message text
+  const message = ctx.message as Message.TextMessage | undefined;
+  if (!message || !('text' in message)) return false;
+
+  const customAnswer = message.text.trim();
+  if (!customAnswer) {
+    await ctx.reply('❌ Please provide a non-empty answer.');
+    return true;
+  }
+
+  // Clear session state
+  sessionStore.clearCustomInputState(userId);
+
+  // Process the answer
+  const updatedPlan = await queueManager.answerDecision(
+    state.planId,
+    state.decisionId,
+    customAnswer
+  );
+
+  if (!updatedPlan) {
+    await ctx.reply('❌ Failed to save answer. Plan may have been removed.');
+    return true;
+  }
+
+  // Delete the user's message (keep chat clean)
+  try {
+    await ctx.deleteMessage();
+  } catch {
+    // Ignore if can't delete (old message, etc.)
+  }
+
+  // Edit the original prompt message to show result
+  try {
+    if (updatedPlan.frontmatter.status === 'completed') {
+      await ctx.telegram.editMessageText(
+        ctx.chat!.id,
+        state.messageId,
+        undefined,
+        buildCompletionView(updatedPlan),
+        {
+          parse_mode: 'Markdown',
+          reply_markup: buildCompletionKeyboard().reply_markup,
+        }
+      );
+    } else {
+      // Find next pending decision
+      const answeredIndex = updatedPlan.decisions.findIndex(d => d.id === state.decisionId);
+      const nextIndex = updatedPlan.decisions.findIndex(
+        (d, i) => i > answeredIndex && d.status === 'pending'
+      );
+
+      if (nextIndex !== -1) {
+        const nextDecision = updatedPlan.decisions[nextIndex];
+        await ctx.telegram.editMessageText(
+          ctx.chat!.id,
+          state.messageId,
+          undefined,
+          buildDecisionView(updatedPlan, nextDecision, nextIndex),
+          {
+            parse_mode: 'Markdown',
+            reply_markup: buildDecisionKeyboard(updatedPlan, nextDecision).reply_markup,
+          }
+        );
+      } else {
+        await ctx.telegram.editMessageText(
+          ctx.chat!.id,
+          state.messageId,
+          undefined,
+          buildCompletionView(updatedPlan),
+          {
+            parse_mode: 'Markdown',
+            reply_markup: buildCompletionKeyboard().reply_markup,
+          }
+        );
+      }
+    }
+  } catch (err) {
+    console.error('[Callbacks] Failed to edit message after custom input:', err);
+    // Send a new message as fallback
+    await ctx.reply(`✅ Answer recorded: \`${customAnswer}\``, { parse_mode: 'Markdown' });
+  }
+
+  return true;
 }
