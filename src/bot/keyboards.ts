@@ -77,12 +77,17 @@ export function buildDecisionKeyboard(
   buttons.push(navButtons);
   
   // Option buttons - arrange in rows of 2-3
-  const optionButtons = decision.options.map(option =>
-    Markup.button.callback(
-      option.charAt(0).toUpperCase() + option.slice(1),
+  // Show checkmark on previously selected option
+  const optionButtons = decision.options.map(option => {
+    const isSelected = decision.answer === option;
+    const label = option.charAt(0).toUpperCase() + option.slice(1);
+    const buttonText = isSelected ? `✓ ${label}` : label;
+    
+    return Markup.button.callback(
+      buttonText,
       `answer:${plan.frontmatter.id}:${decision.id}:${option}`
-    )
-  );
+    );
+  });
 
   // Arrange options in rows of 3
   for (let i = 0; i < optionButtons.length; i += 3) {
