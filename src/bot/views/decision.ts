@@ -122,6 +122,42 @@ export function buildDecisionNotFoundView(decisionId: string): string {
 }
 
 /**
+ * Build review summary view - shown before final submission
+ */
+export function buildReviewSummaryView(plan: DecisionFile): string {
+  const { frontmatter, decisions } = plan;
+  
+  const answeredCount = decisions.filter(d => d.answer && d.answer !== '__skipped__').length;
+  const skippedCount = decisions.filter(d => d.answer === '__skipped__').length;
+  const pendingCount = decisions.filter(d => !d.answer).length;
+  
+  const lines: string[] = [
+    `📋 *Review: ${escapeMarkdown(frontmatter.title)}*`,
+    '',
+    `_${answeredCount} answered${skippedCount > 0 ? `, ${skippedCount} skipped` : ''}${pendingCount > 0 ? `, ${pendingCount} pending` : ''}_`,
+    '',
+  ];
+
+  for (let i = 0; i < decisions.length; i++) {
+    const decision = decisions[i];
+    const num = i + 1;
+    
+    if (decision.answer === '__skipped__') {
+      lines.push(`${num}. ${decision.id} → _(skipped)_`);
+    } else if (decision.answer) {
+      lines.push(`${num}. ${decision.id} → \`${decision.answer}\``);
+    } else {
+      lines.push(`${num}. ${decision.id} → ⚠️ _unanswered_`);
+    }
+  }
+
+  lines.push('');
+  lines.push('_Tap a decision to change it, or submit when ready._');
+
+  return lines.join('\n');
+}
+
+/**
  * Escape markdown special characters
  */
 function escapeMarkdown(text: string): string {

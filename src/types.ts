@@ -27,7 +27,7 @@ export type Priority = 'low' | 'normal' | 'high' | 'urgent';
 /**
  * Status of a decision or plan
  */
-export type Status = 'pending' | 'in_progress' | 'completed' | 'answered' | 'skipped';
+export type Status = 'pending' | 'in_progress' | 'ready' | 'completed' | 'answered' | 'skipped';
 
 /**
  * A single decision within a plan

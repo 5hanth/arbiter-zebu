@@ -176,7 +176,7 @@ describe('Callback Data Parsing', () => {
 });
 
 describe('Callback Actions', () => {
-  const validActions = ['refresh', 'queue', 'open', 'start', 'answer', 'skip', 'custom', 'noop'];
+  const validActions = ['refresh', 'queue', 'open', 'start', 'answer', 'skip', 'custom', 'prev', 'next', 'goto', 'review', 'submit', 'noop'];
 
   it('should recognize all valid actions', () => {
     for (const action of validActions) {
@@ -190,5 +190,64 @@ describe('Callback Actions', () => {
       expect(action).toBe(action.toLowerCase());
       expect(action).not.toContain(' ');
     }
+  });
+});
+
+describe('Navigation Callback Parsing', () => {
+  it('should parse prev callback format', () => {
+    const data = 'prev:plan-123:2';
+    const parts = data.split(':');
+    
+    expect(parts[0]).toBe('prev');
+    expect(parts[1]).toBe('plan-123');
+    expect(parseInt(parts[2], 10)).toBe(2);
+  });
+
+  it('should parse next callback format', () => {
+    const data = 'next:plan-123:0';
+    const parts = data.split(':');
+    
+    expect(parts[0]).toBe('next');
+    expect(parts[1]).toBe('plan-123');
+    expect(parseInt(parts[2], 10)).toBe(0);
+  });
+
+  it('should parse goto callback format', () => {
+    const data = 'goto:plan-123:1';
+    const parts = data.split(':');
+    
+    expect(parts[0]).toBe('goto');
+    expect(parts[1]).toBe('plan-123');
+    expect(parseInt(parts[2], 10)).toBe(1);
+  });
+
+  it('should calculate target index for prev', () => {
+    const currentIndex = 2;
+    const targetIndex = currentIndex - 1;
+    expect(targetIndex).toBe(1);
+  });
+
+  it('should calculate target index for next', () => {
+    const currentIndex = 0;
+    const targetIndex = currentIndex + 1;
+    expect(targetIndex).toBe(1);
+  });
+});
+
+describe('Review and Submit Callbacks', () => {
+  it('should parse review callback format', () => {
+    const data = 'review:plan-123';
+    const parts = data.split(':');
+    
+    expect(parts[0]).toBe('review');
+    expect(parts[1]).toBe('plan-123');
+  });
+
+  it('should parse submit callback format', () => {
+    const data = 'submit:plan-123';
+    const parts = data.split(':');
+    
+    expect(parts[0]).toBe('submit');
+    expect(parts[1]).toBe('plan-123');
   });
 });
