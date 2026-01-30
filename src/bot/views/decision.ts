@@ -26,10 +26,16 @@ export function buildDecisionView(
     lines.push('');
   }
 
-  // Show options preview
+  // Show options with letter labels (A, B, C, ...)
   if (decision.options.length > 0) {
+    lines.push('*Options:*');
     const optionList = decision.options
-      .map(opt => `• \`${opt}\``)
+      .map((opt, i) => {
+        const letter = String.fromCharCode(65 + i); // A, B, C, ...
+        const isSelected = decision.answer === opt;
+        const prefix = isSelected ? `✓ ${letter}` : letter;
+        return `${prefix}. ${opt}`;
+      })
       .join('\n');
     lines.push(optionList);
   }
