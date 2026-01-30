@@ -13,7 +13,7 @@ import type { ArbiterConfig } from '../types.js';
 import type { QueueManager } from '../queue/index.js';
 import { buildQueueView, buildEmptyQueueView } from './views/index.js';
 import { buildQueueKeyboard } from './keyboards.js';
-import { createCallbackRouter } from './callbacks.js';
+import { createCallbackRouter, handleCustomTextInput } from './callbacks.js';
 
 /**
  * Create and configure the Telegraf bot
@@ -104,6 +104,16 @@ export function createBot(config: ArbiterConfig, queueManager: QueueManager): Te
         parse_mode: 'Markdown',
         reply_markup: buildQueueKeyboard(plans).reply_markup,
       });
+    }
+  });
+
+  // Text message handler (for custom input responses)
+  bot.on('text', async (ctx, next) => {
+    // Check if this is a custom input response
+    const handled = await handleCustomTextInput(ctx, queueManager);
+    if (!handled) {
+      // Not a custom input - pass to next handler (if any)
+      return next();
     }
   });
 
