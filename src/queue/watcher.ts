@@ -35,9 +35,10 @@ export class QueueWatcher extends EventEmitter {
       return;
     }
 
-    const pattern = `${this.watchDir}/**/*.md`;
-
-    this.watcher = watch(pattern, {
+    // Watch the directory itself, not a glob pattern
+    // Glob patterns like `dir/**/*.md` can miss files in the root directory
+    
+    this.watcher = watch(this.watchDir, {
       persistent: true,
       ignoreInitial: false, // Emit 'add' events for existing files on startup
       awaitWriteFinish: {
@@ -48,6 +49,7 @@ export class QueueWatcher extends EventEmitter {
         /(^|[\/\\])\../, // Ignore dotfiles (including .tmp-* files)
         /\.tmp-/, // Explicitly ignore temp files
       ],
+      depth: 1, // Only watch immediate children (plans are not nested)
     });
 
     this.watcher
@@ -93,6 +95,7 @@ export class QueueWatcher extends EventEmitter {
       fileName: basename(filePath),
     };
     
+    console.log('[Watcher] Plan added:', basename(filePath));
     this.emit('plan:added', payload);
     this.emit('change', payload);
   }
