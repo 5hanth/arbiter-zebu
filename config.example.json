@@ -1,0 +1,13 @@
+{
+  "telegram": {
+    "token": "YOUR_BOT_TOKEN",
+    "allowedUsers": []
+  },
+  "queue": {
+    "dir": "~/.arbiter/queue",
+    "watchInterval": 1000
+  },
+  "notifications": {
+    "enabled": true
+  }
+}
