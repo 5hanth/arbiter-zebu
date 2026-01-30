@@ -211,6 +211,29 @@ export class QueueManager {
   }
 
   /**
+   * Submit a plan (finalize and trigger notifications)
+   * Call this when user confirms all answers are correct
+   */
+  async submitPlan(planId: string): Promise<DecisionFile | null> {
+    const plan = this.getPlan(planId);
+    if (!plan) {
+      console.error(`[Queue] Plan not found: ${planId}`);
+      return null;
+    }
+
+    // Only allow submitting if all decisions are answered (status: ready)
+    if (plan.frontmatter.status !== 'ready') {
+      console.error(`[Queue] Plan not ready for submission: ${planId} (status: ${plan.frontmatter.status})`);
+      return null;
+    }
+
+    // Complete the plan
+    await this.handlePlanCompleted(plan);
+    
+    return plan;
+  }
+
+  /**
    * Handle file change (added or updated)
    */
   private async handleFileChange(filePath: string): Promise<void> {

@@ -17,6 +17,7 @@ import {
   buildCompletionView,
   buildCustomInputView,
   buildDecisionNotFoundView,
+  buildReviewSummaryView,
 } from './views/index.js';
 import {
   buildQueueKeyboard,
@@ -24,6 +25,7 @@ import {
   buildDecisionKeyboard,
   buildCompletionKeyboard,
   buildCustomInputKeyboard,
+  buildReviewSummaryKeyboard,
 } from './keyboards.js';
 
 type CallbackContext = NarrowedContext<Context<Update>, Update.CallbackQueryUpdate<CallbackQuery>>;
@@ -99,6 +101,39 @@ export function createCallbackRouter(queueManager: QueueManager) {
         case 'custom':
           if (planId && decisionId) {
             await handleCustomPrompt(ctx, queueManager, planId, decisionId);
+          }
+          break;
+
+        case 'prev':
+          if (planId && decisionId) {
+            const prevIndex = parseInt(decisionId, 10);
+            await handleNavigate(ctx, queueManager, planId, prevIndex - 1);
+          }
+          break;
+
+        case 'next':
+          if (planId && decisionId) {
+            const nextIdx = parseInt(decisionId, 10);
+            await handleNavigate(ctx, queueManager, planId, nextIdx + 1);
+          }
+          break;
+
+        case 'goto':
+          if (planId && decisionId) {
+            const gotoIndex = parseInt(decisionId, 10);
+            await handleNavigate(ctx, queueManager, planId, gotoIndex);
+          }
+          break;
+
+        case 'review':
+          if (planId) {
+            await handleReviewSummary(ctx, queueManager, planId);
+          }
+          break;
+
+        case 'submit':
+          if (planId) {
+            await handleSubmit(ctx, queueManager, planId);
           }
           break;
 
@@ -204,7 +239,7 @@ async function handleStartReview(ctx: CallbackContext, queueManager: QueueManage
   
   await ctx.editMessageText(buildDecisionView(plan, decision, decisionIndex), {
     parse_mode: 'Markdown',
-    reply_markup: buildDecisionKeyboard(plan, decision).reply_markup,
+    reply_markup: buildDecisionKeyboard(plan, decision, decisionIndex).reply_markup,
   });
 }
 
@@ -234,7 +269,16 @@ async function handleAnswer(
   // Find the decision that was just answered
   const answeredIndex = updatedPlan.decisions.findIndex(d => d.id === decisionId);
 
-  // Check if plan is complete
+  // Check if all decisions are answered (status: ready) - show review summary
+  if (updatedPlan.frontmatter.status === 'ready') {
+    await ctx.editMessageText(buildReviewSummaryView(updatedPlan), {
+      parse_mode: 'Markdown',
+      reply_markup: buildReviewSummaryKeyboard(updatedPlan).reply_markup,
+    });
+    return;
+  }
+
+  // Check if plan was already completed (edge case)
   if (updatedPlan.frontmatter.status === 'completed') {
     await ctx.editMessageText(buildCompletionView(updatedPlan), {
       parse_mode: 'Markdown',
@@ -247,10 +291,10 @@ async function handleAnswer(
   const nextIndex = updatedPlan.decisions.findIndex((d, i) => i > answeredIndex && d.status === 'pending');
   
   if (nextIndex === -1) {
-    // No more pending decisions
-    await ctx.editMessageText(buildCompletionView(updatedPlan), {
+    // No more pending decisions - show review summary
+    await ctx.editMessageText(buildReviewSummaryView(updatedPlan), {
       parse_mode: 'Markdown',
-      reply_markup: buildCompletionKeyboard().reply_markup,
+      reply_markup: buildReviewSummaryKeyboard(updatedPlan).reply_markup,
     });
     return;
   }
@@ -260,7 +304,7 @@ async function handleAnswer(
   // Show brief confirmation then next decision
   await ctx.editMessageText(buildDecisionView(updatedPlan, nextDecision, nextIndex), {
     parse_mode: 'Markdown',
-    reply_markup: buildDecisionKeyboard(updatedPlan, nextDecision).reply_markup,
+    reply_markup: buildDecisionKeyboard(updatedPlan, nextDecision, nextIndex).reply_markup,
   });
 }
 
@@ -285,7 +329,16 @@ async function handleSkip(
     return;
   }
 
-  // Check if plan is complete
+  // Check if all decisions are answered (status: ready) - show review summary
+  if (updatedPlan.frontmatter.status === 'ready') {
+    await ctx.editMessageText(buildReviewSummaryView(updatedPlan), {
+      parse_mode: 'Markdown',
+      reply_markup: buildReviewSummaryKeyboard(updatedPlan).reply_markup,
+    });
+    return;
+  }
+
+  // Check if plan was already completed (edge case)
   if (updatedPlan.frontmatter.status === 'completed') {
     await ctx.editMessageText(buildCompletionView(updatedPlan), {
       parse_mode: 'Markdown',
@@ -299,9 +352,10 @@ async function handleSkip(
   const nextIndex = updatedPlan.decisions.findIndex((d, i) => i > skippedIndex && d.status === 'pending');
   
   if (nextIndex === -1) {
-    await ctx.editMessageText(buildCompletionView(updatedPlan), {
+    // No more pending - show review summary
+    await ctx.editMessageText(buildReviewSummaryView(updatedPlan), {
       parse_mode: 'Markdown',
-      reply_markup: buildCompletionKeyboard().reply_markup,
+      reply_markup: buildReviewSummaryKeyboard(updatedPlan).reply_markup,
     });
     return;
   }
@@ -310,7 +364,97 @@ async function handleSkip(
   
   await ctx.editMessageText(buildDecisionView(updatedPlan, nextDecision, nextIndex), {
     parse_mode: 'Markdown',
-    reply_markup: buildDecisionKeyboard(updatedPlan, nextDecision).reply_markup,
+    reply_markup: buildDecisionKeyboard(updatedPlan, nextDecision, nextIndex).reply_markup,
+  });
+}
+
+/**
+ * Handle navigation between decisions (prev/next)
+ */
+async function handleNavigate(
+  ctx: CallbackContext,
+  queueManager: QueueManager,
+  planId: string,
+  targetIndex: number
+) {
+  await ctx.answerCbQuery();
+  
+  const plan = queueManager.getPlan(planId);
+  
+  if (!plan) {
+    await ctx.editMessageText(buildPlanNotFoundView(planId), {
+      parse_mode: 'Markdown',
+      reply_markup: buildQueueKeyboard([]).reply_markup,
+    });
+    return;
+  }
+
+  // Validate index bounds
+  if (targetIndex < 0 || targetIndex >= plan.decisions.length) {
+    await ctx.answerCbQuery('Invalid navigation');
+    return;
+  }
+
+  const decision = plan.decisions[targetIndex];
+  
+  await ctx.editMessageText(buildDecisionView(plan, decision, targetIndex), {
+    parse_mode: 'Markdown',
+    reply_markup: buildDecisionKeyboard(plan, decision, targetIndex).reply_markup,
+  });
+}
+
+/**
+ * Handle review summary view
+ */
+async function handleReviewSummary(
+  ctx: CallbackContext,
+  queueManager: QueueManager,
+  planId: string
+) {
+  await ctx.answerCbQuery();
+  
+  const plan = queueManager.getPlan(planId);
+  
+  if (!plan) {
+    await ctx.editMessageText(buildPlanNotFoundView(planId), {
+      parse_mode: 'Markdown',
+      reply_markup: buildQueueKeyboard([]).reply_markup,
+    });
+    return;
+  }
+
+  await ctx.editMessageText(buildReviewSummaryView(plan), {
+    parse_mode: 'Markdown',
+    reply_markup: buildReviewSummaryKeyboard(plan).reply_markup,
+  });
+}
+
+/**
+ * Handle final submission
+ */
+async function handleSubmit(
+  ctx: CallbackContext,
+  queueManager: QueueManager,
+  planId: string
+) {
+  await ctx.answerCbQuery('Submitting...');
+  
+  const result = await queueManager.submitPlan(planId);
+  
+  if (!result) {
+    await ctx.editMessageText(
+      '❌ *Submission Failed*\n\nPlan not found or not ready for submission.',
+      {
+        parse_mode: 'Markdown',
+        reply_markup: buildQueueKeyboard([]).reply_markup,
+      }
+    );
+    return;
+  }
+
+  await ctx.editMessageText(buildCompletionView(result), {
+    parse_mode: 'Markdown',
+    reply_markup: buildCompletionKeyboard().reply_markup,
   });
 }
 
@@ -412,7 +556,19 @@ export async function handleCustomTextInput(
 
   // Edit the original prompt message to show result
   try {
-    if (updatedPlan.frontmatter.status === 'completed') {
+    // Check if all decisions are answered (status: ready) - show review summary
+    if (updatedPlan.frontmatter.status === 'ready') {
+      await ctx.telegram.editMessageText(
+        ctx.chat!.id,
+        state.messageId,
+        undefined,
+        buildReviewSummaryView(updatedPlan),
+        {
+          parse_mode: 'Markdown',
+          reply_markup: buildReviewSummaryKeyboard(updatedPlan).reply_markup,
+        }
+      );
+    } else if (updatedPlan.frontmatter.status === 'completed') {
       await ctx.telegram.editMessageText(
         ctx.chat!.id,
         state.messageId,
@@ -439,18 +595,19 @@ export async function handleCustomTextInput(
           buildDecisionView(updatedPlan, nextDecision, nextIndex),
           {
             parse_mode: 'Markdown',
-            reply_markup: buildDecisionKeyboard(updatedPlan, nextDecision).reply_markup,
+            reply_markup: buildDecisionKeyboard(updatedPlan, nextDecision, nextIndex).reply_markup,
           }
         );
       } else {
+        // All answered but status not updated yet - show review
         await ctx.telegram.editMessageText(
           ctx.chat!.id,
           state.messageId,
           undefined,
-          buildCompletionView(updatedPlan),
+          buildReviewSummaryView(updatedPlan),
           {
             parse_mode: 'Markdown',
-            reply_markup: buildCompletionKeyboard().reply_markup,
+            reply_markup: buildReviewSummaryKeyboard(updatedPlan).reply_markup,
           }
         );
       }

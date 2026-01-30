@@ -136,8 +136,10 @@ export async function updateDecision(
     const remaining = parsed.decisions.length - answeredCount;
     
     // Determine new status
-    const isComplete = remaining === 0;
-    const newStatus: Status = isComplete ? 'completed' : 'in_progress';
+    // 'ready' means all decisions answered but not yet submitted
+    // 'completed' is only set when user explicitly submits
+    const isReady = remaining === 0;
+    const newStatus: Status = isReady ? 'ready' : 'in_progress';
     
     // Update frontmatter
     newContent = updateFrontmatter(newContent, {
@@ -145,7 +147,6 @@ export async function updateDecision(
       answered: answeredCount,
       remaining: remaining,
       updated_at: new Date().toISOString(),
-      ...(isComplete ? { completed_at: new Date().toISOString() } : {}),
     });
     
     // Atomic write

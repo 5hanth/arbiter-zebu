@@ -47,10 +47,34 @@ export function buildPlanKeyboard(plan: DecisionFile) {
 }
 
 /**
- * Build decision keyboard with options
+ * Build decision keyboard with options and navigation
  */
-export function buildDecisionKeyboard(plan: DecisionFile, decision: Decision) {
+export function buildDecisionKeyboard(
+  plan: DecisionFile, 
+  decision: Decision,
+  decisionIndex: number
+) {
   const buttons: ReturnType<typeof Markup.button.callback>[][] = [];
+  const planId = plan.frontmatter.id;
+  const totalDecisions = plan.decisions.length;
+  
+  // Navigation row (prev/next)
+  const navButtons: ReturnType<typeof Markup.button.callback>[] = [];
+  if (decisionIndex > 0) {
+    navButtons.push(
+      Markup.button.callback('⬅️ Prev', `prev:${planId}:${decisionIndex}`)
+    );
+  }
+  // Show current position
+  navButtons.push(
+    Markup.button.callback(`${decisionIndex + 1}/${totalDecisions}`, 'noop')
+  );
+  if (decisionIndex < totalDecisions - 1) {
+    navButtons.push(
+      Markup.button.callback('Next ➡️', `next:${planId}:${decisionIndex}`)
+    );
+  }
+  buttons.push(navButtons);
   
   // Option buttons - arrange in rows of 2-3
   const optionButtons = decision.options.map(option =>
@@ -101,4 +125,48 @@ export function buildCustomInputKeyboard(planId: string, _decisionId: string) {
   return Markup.inlineKeyboard([
     [Markup.button.callback('❌ Cancel', `start:${planId}`)]
   ]);
+}
+
+/**
+ * Build review summary keyboard - decisions as buttons + submit
+ */
+export function buildReviewSummaryKeyboard(plan: DecisionFile) {
+  const buttons: ReturnType<typeof Markup.button.callback>[][] = [];
+  const planId = plan.frontmatter.id;
+  
+  // Decision buttons - each navigates to that decision
+  for (let i = 0; i < plan.decisions.length; i++) {
+    const decision = plan.decisions[i];
+    const num = i + 1;
+    
+    let label: string;
+    if (decision.answer === '__skipped__') {
+      label = `${num}. ${decision.id} (skipped)`;
+    } else if (decision.answer) {
+      label = `${num}. ${decision.id} → ${decision.answer}`;
+    } else {
+      label = `${num}. ${decision.id} ⚠️`;
+    }
+    
+    // Truncate label if too long (Telegram button limit)
+    if (label.length > 40) {
+      label = label.slice(0, 37) + '...';
+    }
+    
+    buttons.push([
+      Markup.button.callback(label, `goto:${planId}:${i}`)
+    ]);
+  }
+  
+  // Submit button
+  buttons.push([
+    Markup.button.callback('✅ Submit Final', `submit:${planId}`)
+  ]);
+  
+  // Back to plan
+  buttons.push([
+    Markup.button.callback('↩️ Back to Plan', `open:${planId}`)
+  ]);
+
+  return Markup.inlineKeyboard(buttons);
 }

@@ -164,7 +164,7 @@ describe('Writer', () => {
     expect(result!.frontmatter.status).toBe('in_progress');
   });
 
-  it('marks plan as completed when all decisions answered', async () => {
+  it('marks plan as ready when all decisions answered', async () => {
     // Answer first decision
     await updateDecision(testFilePath, 'first-choice', 'option-a');
     
@@ -172,9 +172,9 @@ describe('Writer', () => {
     const result = await updateDecision(testFilePath, 'second-choice', 'yes');
     
     expect(result).not.toBeNull();
-    expect(result!.frontmatter.status).toBe('completed');
+    // Status is 'ready' (not 'completed') - requires explicit submission
+    expect(result!.frontmatter.status).toBe('ready');
     expect(result!.frontmatter.remaining).toBe(0);
-    expect(result!.frontmatter.completedAt).not.toBeNull();
   });
 
   it('skips decision with special marker', async () => {

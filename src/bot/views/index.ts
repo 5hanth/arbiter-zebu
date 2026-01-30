@@ -10,4 +10,5 @@ export {
   buildCompletionView,
   buildCustomInputView,
   buildDecisionNotFoundView,
+  buildReviewSummaryView,
 } from './decision.js';
