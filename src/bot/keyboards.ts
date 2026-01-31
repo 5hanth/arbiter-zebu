@@ -125,16 +125,10 @@ export function buildDecisionKeyboard(
   }
 
   // Custom and Skip buttons
-  const actionButtons = [];
-  if (decision.allowCustom) {
-    actionButtons.push(
-      Markup.button.callback('✏️ Custom', `custom:${plan.frontmatter.id}:${decision.id}`)
-    );
-  }
-  actionButtons.push(
+  buttons.push([
+    Markup.button.callback('✏️ Custom', `custom:${plan.frontmatter.id}:${decision.id}`),
     Markup.button.callback('⏭️ Skip', `skip:${plan.frontmatter.id}:${decision.id}`)
-  );
-  buttons.push(actionButtons);
+  ]);
 
   // Back button
   buttons.push([
