@@ -67,9 +67,9 @@ export function buildAnsweredView(
   
   if (nextDecision) {
     const nextIndex = plan.decisions.indexOf(nextDecision);
-    lines.push(`_Moving to decision ${nextIndex + 1}..._`);
+    lines.push(`_Moving to decision ${nextIndex + 1}\\.\\.\\._`);
   } else {
-    lines.push('_All decisions complete!_');
+    lines.push('_All decisions complete\\!_');
   }
 
   return lines.join('\n');
@@ -82,22 +82,22 @@ export function buildCompletionView(plan: DecisionFile): string {
   const { frontmatter, decisions } = plan;
   
   const lines: string[] = [
-    `✅ *${escapeMarkdown(frontmatter.title)} — Complete!*`,
+    `✅ *${escapeMarkdown(frontmatter.title)} — Complete\\!*`,
     '',
     '*Answers:*',
   ];
 
   for (const decision of decisions) {
     if (decision.answer) {
-      lines.push(`• ${decision.id} → \`${decision.answer}\``);
+      lines.push(`• ${escapeMarkdown(decision.id)} → \`${decision.answer}\``);
     } else {
-      lines.push(`• ${decision.id} → _(skipped)_`);
+      lines.push(`• ${escapeMarkdown(decision.id)} → _\\(skipped\\)_`);
     }
   }
 
   if (frontmatter.notifySession) {
     lines.push('');
-    lines.push(`_Notifying: ${frontmatter.notifySession}_`);
+    lines.push(`_Notifying: ${escapeMarkdown(frontmatter.notifySession)}_`);
   }
 
   return lines.join('\n');
@@ -110,9 +110,9 @@ export function buildCustomInputView(_plan: DecisionFile, decision: Decision): s
   return [
     `✏️ *Custom Answer for: ${escapeMarkdown(decision.id)}*`,
     '',
-    'Reply with your custom answer.',
+    'Reply with your custom answer\\.',
     '',
-    '_Type your answer and send it as a message._',
+    '_Type your answer and send it as a message\\._',
   ].join('\n');
 }
 
@@ -149,16 +149,16 @@ export function buildReviewSummaryView(plan: DecisionFile): string {
     const num = i + 1;
     
     if (decision.answer === '__skipped__') {
-      lines.push(`${num}. ${decision.id} → _(skipped)_`);
+      lines.push(`${num}\\. ${escapeMarkdown(decision.id)} → _\\(skipped\\)_`);
     } else if (decision.answer) {
-      lines.push(`${num}. ${decision.id} → \`${decision.answer}\``);
+      lines.push(`${num}\\. ${escapeMarkdown(decision.id)} → \`${decision.answer}\``);
     } else {
-      lines.push(`${num}. ${decision.id} → ⚠️ _unanswered_`);
+      lines.push(`${num}\\. ${escapeMarkdown(decision.id)} → ⚠️ _unanswered_`);
     }
   }
 
   lines.push('');
-  lines.push('_Tap a decision to change it, or submit when ready._');
+  lines.push('_Tap a decision to change it, or submit when ready\\._');
 
   return lines.join('\n');
 }

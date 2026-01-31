@@ -168,12 +168,12 @@ async function handleQueueView(ctx: CallbackContext, queueManager: QueueManager)
 
   if (plans.length === 0) {
     await ctx.editMessageText(buildEmptyQueueView(), {
-      parse_mode: 'Markdown',
+      parse_mode: 'MarkdownV2',
       reply_markup: buildQueueKeyboard([]).reply_markup,
     });
   } else {
     await ctx.editMessageText(buildQueueView(plans, stats), {
-      parse_mode: 'Markdown',
+      parse_mode: 'MarkdownV2',
       reply_markup: buildQueueKeyboard(plans).reply_markup,
     });
   }
@@ -189,14 +189,14 @@ async function handleOpenPlan(ctx: CallbackContext, queueManager: QueueManager, 
   
   if (!plan) {
     await ctx.editMessageText(buildPlanNotFoundView(planId), {
-      parse_mode: 'Markdown',
+      parse_mode: 'MarkdownV2',
       reply_markup: buildQueueKeyboard([]).reply_markup,
     });
     return;
   }
 
   await ctx.editMessageText(buildPlanView(plan), {
-    parse_mode: 'Markdown',
+    parse_mode: 'MarkdownV2',
     reply_markup: buildPlanKeyboard(plan).reply_markup,
   });
 }
@@ -217,7 +217,7 @@ async function handleStartReview(ctx: CallbackContext, queueManager: QueueManage
   
   if (!plan) {
     await ctx.editMessageText(buildPlanNotFoundView(planId), {
-      parse_mode: 'Markdown',
+      parse_mode: 'MarkdownV2',
       reply_markup: buildQueueKeyboard([]).reply_markup,
     });
     return;
@@ -229,7 +229,7 @@ async function handleStartReview(ctx: CallbackContext, queueManager: QueueManage
   if (decisionIndex === -1) {
     // All decisions answered - show completion
     await ctx.editMessageText(buildCompletionView(plan), {
-      parse_mode: 'Markdown',
+      parse_mode: 'MarkdownV2',
       reply_markup: buildCompletionKeyboard().reply_markup,
     });
     return;
@@ -238,7 +238,7 @@ async function handleStartReview(ctx: CallbackContext, queueManager: QueueManage
   const decision = plan.decisions[decisionIndex];
   
   await ctx.editMessageText(buildDecisionView(plan, decision, decisionIndex), {
-    parse_mode: 'Markdown',
+    parse_mode: 'MarkdownV2',
     reply_markup: buildDecisionKeyboard(plan, decision, decisionIndex).reply_markup,
   });
 }
@@ -260,7 +260,7 @@ async function handleAnswer(
   
   if (!updatedPlan) {
     await ctx.editMessageText(buildPlanNotFoundView(planId), {
-      parse_mode: 'Markdown',
+      parse_mode: 'MarkdownV2',
       reply_markup: buildQueueKeyboard([]).reply_markup,
     });
     return;
@@ -272,7 +272,7 @@ async function handleAnswer(
   // Check if all decisions are answered (status: ready) - show review summary
   if (updatedPlan.frontmatter.status === 'ready') {
     await ctx.editMessageText(buildReviewSummaryView(updatedPlan), {
-      parse_mode: 'Markdown',
+      parse_mode: 'MarkdownV2',
       reply_markup: buildReviewSummaryKeyboard(updatedPlan).reply_markup,
     });
     return;
@@ -281,7 +281,7 @@ async function handleAnswer(
   // Check if plan was already completed (edge case)
   if (updatedPlan.frontmatter.status === 'completed') {
     await ctx.editMessageText(buildCompletionView(updatedPlan), {
-      parse_mode: 'Markdown',
+      parse_mode: 'MarkdownV2',
       reply_markup: buildCompletionKeyboard().reply_markup,
     });
     return;
@@ -293,7 +293,7 @@ async function handleAnswer(
   if (nextIndex === -1) {
     // No more pending decisions - show review summary
     await ctx.editMessageText(buildReviewSummaryView(updatedPlan), {
-      parse_mode: 'Markdown',
+      parse_mode: 'MarkdownV2',
       reply_markup: buildReviewSummaryKeyboard(updatedPlan).reply_markup,
     });
     return;
@@ -303,7 +303,7 @@ async function handleAnswer(
   
   // Show brief confirmation then next decision
   await ctx.editMessageText(buildDecisionView(updatedPlan, nextDecision, nextIndex), {
-    parse_mode: 'Markdown',
+    parse_mode: 'MarkdownV2',
     reply_markup: buildDecisionKeyboard(updatedPlan, nextDecision, nextIndex).reply_markup,
   });
 }
@@ -323,7 +323,7 @@ async function handleSkip(
   
   if (!updatedPlan) {
     await ctx.editMessageText(buildPlanNotFoundView(planId), {
-      parse_mode: 'Markdown',
+      parse_mode: 'MarkdownV2',
       reply_markup: buildQueueKeyboard([]).reply_markup,
     });
     return;
@@ -332,7 +332,7 @@ async function handleSkip(
   // Check if all decisions are answered (status: ready) - show review summary
   if (updatedPlan.frontmatter.status === 'ready') {
     await ctx.editMessageText(buildReviewSummaryView(updatedPlan), {
-      parse_mode: 'Markdown',
+      parse_mode: 'MarkdownV2',
       reply_markup: buildReviewSummaryKeyboard(updatedPlan).reply_markup,
     });
     return;
@@ -341,7 +341,7 @@ async function handleSkip(
   // Check if plan was already completed (edge case)
   if (updatedPlan.frontmatter.status === 'completed') {
     await ctx.editMessageText(buildCompletionView(updatedPlan), {
-      parse_mode: 'Markdown',
+      parse_mode: 'MarkdownV2',
       reply_markup: buildCompletionKeyboard().reply_markup,
     });
     return;
@@ -354,7 +354,7 @@ async function handleSkip(
   if (nextIndex === -1) {
     // No more pending - show review summary
     await ctx.editMessageText(buildReviewSummaryView(updatedPlan), {
-      parse_mode: 'Markdown',
+      parse_mode: 'MarkdownV2',
       reply_markup: buildReviewSummaryKeyboard(updatedPlan).reply_markup,
     });
     return;
@@ -363,7 +363,7 @@ async function handleSkip(
   const nextDecision = updatedPlan.decisions[nextIndex];
   
   await ctx.editMessageText(buildDecisionView(updatedPlan, nextDecision, nextIndex), {
-    parse_mode: 'Markdown',
+    parse_mode: 'MarkdownV2',
     reply_markup: buildDecisionKeyboard(updatedPlan, nextDecision, nextIndex).reply_markup,
   });
 }
@@ -383,7 +383,7 @@ async function handleNavigate(
   
   if (!plan) {
     await ctx.editMessageText(buildPlanNotFoundView(planId), {
-      parse_mode: 'Markdown',
+      parse_mode: 'MarkdownV2',
       reply_markup: buildQueueKeyboard([]).reply_markup,
     });
     return;
@@ -398,7 +398,7 @@ async function handleNavigate(
   const decision = plan.decisions[targetIndex];
   
   await ctx.editMessageText(buildDecisionView(plan, decision, targetIndex), {
-    parse_mode: 'Markdown',
+    parse_mode: 'MarkdownV2',
     reply_markup: buildDecisionKeyboard(plan, decision, targetIndex).reply_markup,
   });
 }
@@ -417,14 +417,14 @@ async function handleReviewSummary(
   
   if (!plan) {
     await ctx.editMessageText(buildPlanNotFoundView(planId), {
-      parse_mode: 'Markdown',
+      parse_mode: 'MarkdownV2',
       reply_markup: buildQueueKeyboard([]).reply_markup,
     });
     return;
   }
 
   await ctx.editMessageText(buildReviewSummaryView(plan), {
-    parse_mode: 'Markdown',
+    parse_mode: 'MarkdownV2',
     reply_markup: buildReviewSummaryKeyboard(plan).reply_markup,
   });
 }
@@ -443,9 +443,9 @@ async function handleSubmit(
   
   if (!result) {
     await ctx.editMessageText(
-      '❌ *Submission Failed*\n\nPlan not found or not ready for submission.',
+      '❌ *Submission Failed*\n\nPlan not found or not ready for submission\\.',
       {
-        parse_mode: 'Markdown',
+        parse_mode: 'MarkdownV2',
         reply_markup: buildQueueKeyboard([]).reply_markup,
       }
     );
@@ -453,7 +453,7 @@ async function handleSubmit(
   }
 
   await ctx.editMessageText(buildCompletionView(result), {
-    parse_mode: 'Markdown',
+    parse_mode: 'MarkdownV2',
     reply_markup: buildCompletionKeyboard().reply_markup,
   });
 }
@@ -473,7 +473,7 @@ async function handleCustomPrompt(
   
   if (!plan) {
     await ctx.editMessageText(buildPlanNotFoundView(planId), {
-      parse_mode: 'Markdown',
+      parse_mode: 'MarkdownV2',
       reply_markup: buildQueueKeyboard([]).reply_markup,
     });
     return;
@@ -483,7 +483,7 @@ async function handleCustomPrompt(
   
   if (!decision) {
     await ctx.editMessageText(buildDecisionNotFoundView(decisionId), {
-      parse_mode: 'Markdown',
+      parse_mode: 'MarkdownV2',
       reply_markup: buildPlanKeyboard(plan).reply_markup,
     });
     return;
@@ -502,7 +502,7 @@ async function handleCustomPrompt(
   }
 
   await ctx.editMessageText(buildCustomInputView(plan, decision), {
-    parse_mode: 'Markdown',
+    parse_mode: 'MarkdownV2',
     reply_markup: buildCustomInputKeyboard(planId, decisionId).reply_markup,
   });
 }
@@ -564,7 +564,7 @@ export async function handleCustomTextInput(
         undefined,
         buildReviewSummaryView(updatedPlan),
         {
-          parse_mode: 'Markdown',
+          parse_mode: 'MarkdownV2',
           reply_markup: buildReviewSummaryKeyboard(updatedPlan).reply_markup,
         }
       );
@@ -575,7 +575,7 @@ export async function handleCustomTextInput(
         undefined,
         buildCompletionView(updatedPlan),
         {
-          parse_mode: 'Markdown',
+          parse_mode: 'MarkdownV2',
           reply_markup: buildCompletionKeyboard().reply_markup,
         }
       );
@@ -594,7 +594,7 @@ export async function handleCustomTextInput(
           undefined,
           buildDecisionView(updatedPlan, nextDecision, nextIndex),
           {
-            parse_mode: 'Markdown',
+            parse_mode: 'MarkdownV2',
             reply_markup: buildDecisionKeyboard(updatedPlan, nextDecision, nextIndex).reply_markup,
           }
         );
@@ -606,7 +606,7 @@ export async function handleCustomTextInput(
           undefined,
           buildReviewSummaryView(updatedPlan),
           {
-            parse_mode: 'Markdown',
+            parse_mode: 'MarkdownV2',
             reply_markup: buildReviewSummaryKeyboard(updatedPlan).reply_markup,
           }
         );
@@ -615,7 +615,7 @@ export async function handleCustomTextInput(
   } catch (err) {
     console.error('[Callbacks] Failed to edit message after custom input:', err);
     // Send a new message as fallback
-    await ctx.reply(`✅ Answer recorded: \`${customAnswer}\``, { parse_mode: 'Markdown' });
+    await ctx.reply(`✅ Answer recorded: \`${customAnswer}\``, { parse_mode: 'MarkdownV2' });
   }
 
   return true;

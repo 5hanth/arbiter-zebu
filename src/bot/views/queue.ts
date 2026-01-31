@@ -29,14 +29,21 @@ function formatStats(stats: QueueStats): string {
 }
 
 /**
+ * Escape markdown special characters for MarkdownV2
+ */
+function escapeMarkdown(text: string): string {
+  return text.replace(/[_*[\]()~`>#+=|{}.!-]/g, '\\$&');
+}
+
+/**
  * Format a single plan line
  */
 function formatPlanLine(plan: DecisionFile, index: number): string {
   const emoji = PRIORITY_EMOJI[plan.frontmatter.priority] || '⚪';
-  const tag = plan.frontmatter.tag ? `[${plan.frontmatter.tag}]` : '';
+  const tag = plan.frontmatter.tag ? `\\[${escapeMarkdown(plan.frontmatter.tag)}\\]` : '';
   const progress = `${plan.frontmatter.answered}/${plan.frontmatter.total}`;
   
-  return `${index + 1}. ${emoji} ${tag} ${plan.frontmatter.title} — ${progress}`;
+  return `${index + 1}\\. ${emoji} ${tag} ${escapeMarkdown(plan.frontmatter.title)} — ${progress}`;
 }
 
 /**
@@ -51,7 +58,7 @@ export function buildQueueView(plans: DecisionFile[], stats: QueueStats): string
   ];
 
   if (plans.length === 0) {
-    lines.push('_No pending decisions! 🎉_');
+    lines.push('_No pending decisions\\! 🎉_');
   } else {
     // Show up to 10 plans
     const displayPlans = plans.slice(0, 10);
@@ -74,8 +81,8 @@ export function buildEmptyQueueView(): string {
   return [
     '📋 *Arbiter — Decision Queue*',
     '',
-    '_No pending decisions!_ 🎉',
+    '_No pending decisions\\!_ 🎉',
     '',
-    'Agents can push decisions using the arbiter skill.',
+    'Agents can push decisions using the arbiter skill\\.',
   ].join('\n');
 }

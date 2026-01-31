@@ -26,13 +26,13 @@ function buildProgressBar(answered: number, total: number): string {
 /**
  * Format decision status in plan view
  */
-function formatDecisionStatus(decision: { id: string; status: string; answer: string | null }, index: number): string {
+function formatDecisionStatus(decision: { id: string; status: string; answer: string | null }, index: number, escape: (s: string) => string): string {
   if (decision.answer) {
-    return `✅ Decision ${index + 1}: ${decision.id} → _${decision.answer}_`;
+    return `✅ Decision ${index + 1}: ${escape(decision.id)} → _${escape(decision.answer)}_`;
   } else if (decision.status === 'pending') {
-    return `⬜ Decision ${index + 1}: ${decision.id}`;
+    return `⬜ Decision ${index + 1}: ${escape(decision.id)}`;
   } else {
-    return `⏭️ Decision ${index + 1}: ${decision.id} _(skipped)_`;
+    return `⏭️ Decision ${index + 1}: ${escape(decision.id)} _\\(skipped\\)_`;
   }
 }
 
@@ -47,7 +47,7 @@ export function buildPlanView(plan: DecisionFile): string {
   const lines: string[] = [
     `📄 *${escapeMarkdown(frontmatter.title)}*`,
     '',
-    `Tag: \`${frontmatter.tag || 'none'}\` │ From: ${frontmatter.agent}`,
+    `Tag: \`${frontmatter.tag || 'none'}\` │ From: ${escapeMarkdown(frontmatter.agent)}`,
     `Priority: ${priorityEmoji} ${frontmatter.priority}`,
     `Progress: ${progressBar} ${frontmatter.answered}/${frontmatter.total}`,
     '',
@@ -55,14 +55,14 @@ export function buildPlanView(plan: DecisionFile): string {
 
   // Add context if present
   if (context && context.trim()) {
-    lines.push(`_${escapeMarkdown(context.slice(0, 200))}${context.length > 200 ? '...' : ''}_`);
+    lines.push(`_${escapeMarkdown(context.slice(0, 200))}${context.length > 200 ? '\\.\\.\\.' : ''}_`);
     lines.push('');
   }
 
   // List decisions with status
   lines.push('*Decisions:*');
   for (let i = 0; i < decisions.length; i++) {
-    lines.push(formatDecisionStatus(decisions[i], i));
+    lines.push(formatDecisionStatus(decisions[i], i, escapeMarkdown));
   }
 
   return lines.join('\n');
@@ -77,7 +77,7 @@ export function buildPlanNotFoundView(planId: string): string {
     '',
     `Could not find plan: \`${planId}\``,
     '',
-    'It may have been completed or removed.',
+    'It may have been completed or removed\\.',
   ].join('\n');
 }
 

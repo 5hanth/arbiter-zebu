@@ -55,7 +55,7 @@ export function createBot(config: ArbiterConfig, queueManager: QueueManager): Te
         const { buildPlanKeyboard } = await import('./keyboards.js');
         
         await ctx.reply(buildPlanView(plan), {
-          parse_mode: 'Markdown',
+          parse_mode: 'MarkdownV2',
           reply_markup: buildPlanKeyboard(plan).reply_markup,
         });
         return;
@@ -63,7 +63,7 @@ export function createBot(config: ArbiterConfig, queueManager: QueueManager): Te
     }
 
     await ctx.reply(
-      '👋 *Welcome to Arbiter Zebu!*\n\n' +
+      '👋 *Welcome to Arbiter Zebu\\!*\n\n' +
       'I help you make decisions for your AI agents\\.\n\n' +
       '*Commands:*\n' +
       '/queue — View pending decisions\n' +
@@ -96,12 +96,12 @@ export function createBot(config: ArbiterConfig, queueManager: QueueManager): Te
 
     if (plans.length === 0) {
       await ctx.reply(buildEmptyQueueView(), {
-        parse_mode: 'Markdown',
+        parse_mode: 'MarkdownV2',
         reply_markup: buildQueueKeyboard([]).reply_markup,
       });
     } else {
       await ctx.reply(buildQueueView(plans, stats), {
-        parse_mode: 'Markdown',
+        parse_mode: 'MarkdownV2',
         reply_markup: buildQueueKeyboard(plans).reply_markup,
       });
     }
