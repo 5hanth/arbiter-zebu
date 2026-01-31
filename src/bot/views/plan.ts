@@ -24,46 +24,23 @@ function buildProgressBar(answered: number, total: number): string {
 }
 
 /**
- * Format decision status in plan view
- */
-function formatDecisionStatus(decision: { id: string; title?: string; status: string; answer: string | null }, index: number, escape: (s: string) => string): string {
-  const label = decision.title || decision.id;
-  if (decision.answer && decision.answer !== '__skipped__') {
-    return `✅ ${index + 1}\\. ${escape(label)}`;
-  } else if (decision.status === 'pending') {
-    return `⬜ ${index + 1}\\. ${escape(label)}`;
-  } else {
-    return `⏭️ ${index + 1}\\. ${escape(label)}`;
-  }
-}
-
-/**
  * Build the plan view message
  */
 export function buildPlanView(plan: DecisionFile): string {
-  const { frontmatter, decisions, context } = plan;
+  const { frontmatter, context } = plan;
   const priorityEmoji = PRIORITY_EMOJI[frontmatter.priority] || '⚪';
   const progressBar = buildProgressBar(frontmatter.answered, frontmatter.total);
   
   const lines: string[] = [
     `📄 *${escapeMarkdown(frontmatter.title)}*`,
     '',
-    `Tag: \`${frontmatter.tag || 'none'}\` │ From: ${escapeMarkdown(frontmatter.agent)}`,
-    `Priority: ${priorityEmoji} ${frontmatter.priority}`,
-    `Progress: ${progressBar} ${frontmatter.answered}/${frontmatter.total}`,
-    '',
+    `${priorityEmoji} ${frontmatter.priority} │ ${progressBar} ${frontmatter.answered}/${frontmatter.total}`,
   ];
 
   // Add context if present
   if (context && context.trim()) {
-    lines.push(`_${escapeMarkdown(context.slice(0, 200))}${context.length > 200 ? '\\.\\.\\.' : ''}_`);
     lines.push('');
-  }
-
-  // List decisions with status
-  lines.push('*Decisions:*');
-  for (let i = 0; i < decisions.length; i++) {
-    lines.push(formatDecisionStatus(decisions[i], i, escapeMarkdown));
+    lines.push(`_${escapeMarkdown(context.slice(0, 300))}${context.length > 300 ? '\\.\\.\\.' : ''}_`);
   }
 
   return lines.join('\n');

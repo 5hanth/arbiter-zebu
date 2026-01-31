@@ -142,26 +142,10 @@ export function buildReviewSummaryView(plan: DecisionFile): string {
   const lines: string[] = [
     `📋 *${escapeMarkdown(frontmatter.title)}*`,
     '',
-    `_${answeredCount} answered${skippedCount > 0 ? `, ${skippedCount} skipped` : ''}${pendingCount > 0 ? `, ${pendingCount} pending` : ''}_`,
+    `✅ ${answeredCount} answered${skippedCount > 0 ? ` · ⏭️ ${skippedCount} skipped` : ''}${pendingCount > 0 ? ` · ⚠️ ${pendingCount} pending` : ''}`,
     '',
+    '_Tap to edit, or submit\\._',
   ];
-
-  for (let i = 0; i < decisions.length; i++) {
-    const decision = decisions[i];
-    const label = decision.title || decision.id;
-    const num = i + 1;
-    
-    if (decision.answer === '__skipped__') {
-      lines.push(`${num}\\. ${escapeMarkdown(label)} → _skipped_`);
-    } else if (decision.answer) {
-      lines.push(`${num}\\. ${escapeMarkdown(label)} → \`${decision.answer}\``);
-    } else {
-      lines.push(`${num}\\. ${escapeMarkdown(label)} → ⚠️`);
-    }
-  }
-
-  lines.push('');
-  lines.push('_Tap to edit, or submit\\._');
 
   return lines.join('\n');
 }
