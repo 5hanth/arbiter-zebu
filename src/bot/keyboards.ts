@@ -31,19 +31,45 @@ export function buildQueueKeyboard(plans: DecisionFile[]) {
  * Build plan keyboard (Start Review / Back)
  */
 export function buildPlanKeyboard(plan: DecisionFile) {
-  const nextDecision = plan.decisions.find(d => d.status === 'pending');
+  const rows: ReturnType<typeof Markup.button.callback>[][] = [];
+  const planId = plan.frontmatter.id;
   
-  const buttons = [];
-  
-  if (nextDecision) {
-    buttons.push(Markup.button.callback('▶️ Start Review', `start:${plan.frontmatter.id}`));
-  } else if (plan.frontmatter.status === 'completed') {
-    buttons.push(Markup.button.callback('✅ Completed', 'noop'));
+  // Decision number buttons (rows of 5)
+  const decisionButtons: ReturnType<typeof Markup.button.callback>[] = [];
+  for (let i = 0; i < plan.decisions.length; i++) {
+    const d = plan.decisions[i];
+    const num = i + 1;
+    const hasAnswer = d.answer && d.answer !== '__skipped__';
+    const label = hasAnswer ? `${num}✓` : `${num}`;
+    decisionButtons.push(Markup.button.callback(label, `goto:${planId}:${i}`));
+    
+    // New row every 5 buttons
+    if (decisionButtons.length === 5) {
+      rows.push([...decisionButtons]);
+      decisionButtons.length = 0;
+    }
+  }
+  // Push remaining buttons
+  if (decisionButtons.length > 0) {
+    rows.push([...decisionButtons]);
   }
   
-  buttons.push(Markup.button.callback('↩️ Back', 'queue'));
+  // Action buttons row
+  const actionButtons: ReturnType<typeof Markup.button.callback>[] = [];
+  
+  const nextPending = plan.decisions.find(d => d.status === 'pending');
+  if (nextPending) {
+    actionButtons.push(Markup.button.callback('▶️ Continue', `start:${planId}`));
+  }
+  
+  if (plan.frontmatter.status === 'ready') {
+    actionButtons.push(Markup.button.callback('📤 Submit', `submit:${planId}`));
+  }
+  
+  actionButtons.push(Markup.button.callback('↩️ Back', 'queue'));
+  rows.push(actionButtons);
 
-  return Markup.inlineKeyboard([buttons]);
+  return Markup.inlineKeyboard(rows);
 }
 
 /**
