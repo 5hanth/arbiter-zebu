@@ -33,8 +33,8 @@ export function buildDecisionView(
       .map((opt, i) => {
         const letter = String.fromCharCode(65 + i); // A, B, C, ...
         const isSelected = decision.answer === opt.key;
-        const prefix = isSelected ? `✅ ${letter}` : letter;
-        return `${prefix}\\. ${escapeMarkdown(opt.label)}`;
+        const suffix = isSelected ? ' ✓' : '';
+        return `${letter}\\. ${escapeMarkdown(opt.label)}${suffix}`;
       })
       .join('\n');
     lines.push(optionList);
