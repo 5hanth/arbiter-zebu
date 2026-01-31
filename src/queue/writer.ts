@@ -63,6 +63,7 @@ function updateDecisionInBody(
   const result: string[] = [];
   
   let inTargetDecision = false;
+  let foundAnswer = false;
   
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
@@ -70,6 +71,7 @@ function updateDecisionInBody(
     // Check for decision section start
     if (line.match(/^## Decision \d+:/)) {
       inTargetDecision = false;
+      foundAnswer = false;
     }
     
     // Check if this is our target decision
@@ -77,15 +79,18 @@ function updateDecisionInBody(
       inTargetDecision = true;
     }
     
-    // Update status line
+    // Update status line - also insert answer/answered_at after status if missing
     if (inTargetDecision && line.trim().startsWith('status:')) {
       result.push(`status: ${status}`);
+      // Insert answer and answered_at right after status if they don't exist
+      // We'll check later if they were found
       continue;
     }
     
     // Update answer line
     if (inTargetDecision && line.trim().startsWith('answer:')) {
       result.push(`answer: ${answer}`);
+      foundAnswer = true;
       continue;
     }
     
@@ -93,6 +98,14 @@ function updateDecisionInBody(
     if (inTargetDecision && line.trim().startsWith('answered_at:')) {
       result.push(`answered_at: ${new Date().toISOString()}`);
       continue;
+    }
+    
+    // When we hit an empty line or next section after status, insert missing fields
+    if (inTargetDecision && !foundAnswer && (line.trim() === '' || line.startsWith('**') || line.startsWith('-'))) {
+      // Insert answer and answered_at before this line
+      result.push(`answer: ${answer}`);
+      result.push(`answered_at: ${new Date().toISOString()}`);
+      foundAnswer = true;
     }
     
     result.push(line);
