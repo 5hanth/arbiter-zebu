@@ -34,24 +34,28 @@ export function buildPlanKeyboard(plan: DecisionFile) {
   const rows: ReturnType<typeof Markup.button.callback>[][] = [];
   const planId = plan.frontmatter.id;
   
-  // Decision number buttons (rows of 5)
-  const decisionButtons: ReturnType<typeof Markup.button.callback>[] = [];
+  // Decision buttons - one per row with short title
   for (let i = 0; i < plan.decisions.length; i++) {
     const d = plan.decisions[i];
     const num = i + 1;
-    const hasAnswer = d.answer && d.answer !== '__skipped__';
-    const label = hasAnswer ? `${num}✓` : `${num}`;
-    decisionButtons.push(Markup.button.callback(label, `goto:${planId}:${i}`));
+    const title = d.title || d.id;
     
-    // New row every 5 buttons
-    if (decisionButtons.length === 5) {
-      rows.push([...decisionButtons]);
-      decisionButtons.length = 0;
+    let prefix: string;
+    if (d.answer === '__skipped__') {
+      prefix = '⏭️';
+    } else if (d.answer) {
+      prefix = '✅';
+    } else {
+      prefix = '⬜';
     }
-  }
-  // Push remaining buttons
-  if (decisionButtons.length > 0) {
-    rows.push([...decisionButtons]);
+    
+    // Short label for button
+    let label = `${prefix} ${num}. ${title}`;
+    if (label.length > 40) {
+      label = label.slice(0, 37) + '...';
+    }
+    
+    rows.push([Markup.button.callback(label, `goto:${planId}:${i}`)]);
   }
   
   // Action buttons row
@@ -169,19 +173,25 @@ export function buildReviewSummaryKeyboard(plan: DecisionFile) {
   for (let i = 0; i < plan.decisions.length; i++) {
     const decision = plan.decisions[i];
     const num = i + 1;
+    const title = decision.title || decision.id;
     
-    let label: string;
+    let prefix: string;
+    let suffix = '';
+    
     if (decision.answer === '__skipped__') {
-      label = `${num}. ${decision.id} (skipped)`;
+      prefix = `${num}. ⏭️`;
     } else if (decision.answer) {
-      label = `${num}. ${decision.id} → ${decision.answer}`;
+      prefix = `${num}. ✓`;
     } else {
-      label = `${num}. ${decision.id} ⚠️`;
+      prefix = `${num}. ⚠️`;
     }
     
-    // Truncate label if too long (Telegram button limit)
-    if (label.length > 40) {
-      label = label.slice(0, 37) + '...';
+    // Build label with title, truncate if needed
+    let label = `${prefix} ${title}${suffix}`;
+    
+    // Telegram button limit ~64 chars, keep it readable
+    if (label.length > 45) {
+      label = label.slice(0, 42) + '...';
     }
     
     buttons.push([
@@ -191,12 +201,12 @@ export function buildReviewSummaryKeyboard(plan: DecisionFile) {
   
   // Submit button
   buttons.push([
-    Markup.button.callback('✅ Submit Final', `submit:${planId}`)
+    Markup.button.callback('📤 Submit', `submit:${planId}`)
   ]);
   
   // Back to plan
   buttons.push([
-    Markup.button.callback('↩️ Back to Plan', `open:${planId}`)
+    Markup.button.callback('↩️ Back', `open:${planId}`)
   ]);
 
   return Markup.inlineKeyboard(buttons);
