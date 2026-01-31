@@ -29,6 +29,11 @@ export function buildDecisionView(
 
   // Show options with letter labels (A, B, C, ...)
   if (decision.options.length > 0) {
+    // Check if answer is a custom one (not matching any option key)
+    const isCustomAnswer = decision.answer && 
+      decision.answer !== '__skipped__' &&
+      !decision.options.some(opt => opt.key === decision.answer);
+    
     const optionList = decision.options
       .map((opt, i) => {
         const letter = String.fromCharCode(65 + i); // A, B, C, ...
@@ -38,6 +43,11 @@ export function buildDecisionView(
       })
       .join('\n');
     lines.push(optionList);
+    
+    // Show custom answer if present
+    if (isCustomAnswer && decision.answer) {
+      lines.push(`\n_Custom: ${escapeMarkdown(decision.answer)}_ ✓`);
+    }
   }
 
   if (decision.allowCustom) {
