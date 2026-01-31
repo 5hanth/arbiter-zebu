@@ -132,6 +132,6 @@ export async function startBot(bot: Telegraf): Promise<void> {
   process.once('SIGTERM', () => bot.stop('SIGTERM'));
 
   console.log('[Bot] Starting Arbiter Zebu...');
-  await bot.launch();
+  await bot.launch({ dropPendingUpdates: true });
   console.log('[Bot] ✅ Bot is running!');
 }

@@ -82,8 +82,20 @@ export function buildPlanNotFoundView(planId: string): string {
 }
 
 /**
- * Escape markdown special characters
+ * Escape markdown special characters, preserving inline code spans
  */
 function escapeMarkdown(text: string): string {
-  return text.replace(/[_*[\]()~`>#+=|{}.!-]/g, '\\$&');
+  // Split by inline code spans (backtick pairs)
+  const parts = text.split(/(`[^`]+`)/g);
+  
+  return parts.map((part) => {
+    // Code spans start and end with backtick
+    if (part.startsWith('`') && part.endsWith('`')) {
+      // Inside code spans, only escape backslash and backtick
+      const inner = part.slice(1, -1).replace(/[\\`]/g, '\\$&');
+      return '`' + inner + '`';
+    }
+    // Regular text - escape all special characters
+    return part.replace(/[_*[\]()~`>#+=|{}.!-]/g, '\\$&');
+  }).join('');
 }
