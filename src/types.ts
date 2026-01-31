@@ -32,13 +32,18 @@ export type Status = 'pending' | 'in_progress' | 'ready' | 'completed' | 'answer
 /**
  * A single decision within a plan
  */
+export interface Option {
+  key: string;
+  label: string;
+}
+
 export interface Decision {
   id: string;
   status: Status;
   answer: string | null;
   answeredAt: string | null;
   context: string;
-  options: string[];
+  options: Option[];
   allowCustom?: boolean;
 }
 

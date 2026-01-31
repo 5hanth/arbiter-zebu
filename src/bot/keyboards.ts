@@ -80,12 +80,12 @@ export function buildDecisionKeyboard(
   // Show checkmark on previously selected option
   const optionButtons = decision.options.map((option, i) => {
     const letter = String.fromCharCode(65 + i); // A, B, C, ...
-    const isSelected = decision.answer === option;
+    const isSelected = decision.answer === option.key;
     const buttonText = isSelected ? `✓ ${letter}` : letter;
     
     return Markup.button.callback(
       buttonText,
-      `answer:${plan.frontmatter.id}:${decision.id}:${option}`
+      `answer:${plan.frontmatter.id}:${decision.id}:${option.key}`
     );
   });
 

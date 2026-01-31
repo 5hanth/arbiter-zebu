@@ -60,7 +60,10 @@ function parseDecisionSection(section: string): Decision | null {
     else if (inOptions && line.startsWith('-')) {
       const optionMatch = line.match(/^-\s+`([^`]+)`(?:\s*[—–-]\s*(.+))?$/);
       if (optionMatch) {
-        decision.options.push(optionMatch[1]);
+        decision.options.push({
+          key: optionMatch[1],
+          label: optionMatch[2] || optionMatch[1], // fallback to key if no label
+        });
       }
     }
     // Continue context
