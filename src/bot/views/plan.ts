@@ -26,13 +26,14 @@ function buildProgressBar(answered: number, total: number): string {
 /**
  * Format decision status in plan view
  */
-function formatDecisionStatus(decision: { id: string; status: string; answer: string | null }, index: number, escape: (s: string) => string): string {
-  if (decision.answer) {
-    return `✅ Decision ${index + 1}: ${escape(decision.id)} → _${escape(decision.answer)}_`;
+function formatDecisionStatus(decision: { id: string; title?: string; status: string; answer: string | null }, index: number, escape: (s: string) => string): string {
+  const label = decision.title || decision.id;
+  if (decision.answer && decision.answer !== '__skipped__') {
+    return `✅ ${index + 1}\\. ${escape(label)}`;
   } else if (decision.status === 'pending') {
-    return `⬜ Decision ${index + 1}: ${escape(decision.id)}`;
+    return `⬜ ${index + 1}\\. ${escape(label)}`;
   } else {
-    return `⏭️ Decision ${index + 1}: ${escape(decision.id)} _\\(skipped\\)_`;
+    return `⏭️ ${index + 1}\\. ${escape(label)}`;
   }
 }
 

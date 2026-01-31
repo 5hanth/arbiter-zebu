@@ -15,12 +15,13 @@ export function buildDecisionView(
   const { frontmatter } = plan;
   const progress = `${decisionIndex + 1}/${frontmatter.total}`;
   
-  const lines: string[] = [
-    `🔸 *Decision ${progress}: ${escapeMarkdown(decision.id)}*`,
-    '',
-  ];
+  // Build header: "15/22 · Title" or "15/22" if no title
+  const title = decision.title || decision.id;
+  const header = `*${progress}* · ${escapeMarkdown(title)}`;
+  
+  const lines: string[] = [header, ''];
 
-  // Add context
+  // Add context/description
   if (decision.context) {
     lines.push(escapeMarkdown(decision.context));
     lines.push('');
@@ -28,12 +29,11 @@ export function buildDecisionView(
 
   // Show options with letter labels (A, B, C, ...)
   if (decision.options.length > 0) {
-    lines.push('*Options:*');
     const optionList = decision.options
       .map((opt, i) => {
         const letter = String.fromCharCode(65 + i); // A, B, C, ...
         const isSelected = decision.answer === opt.key;
-        const prefix = isSelected ? `✓ ${letter}` : letter;
+        const prefix = isSelected ? `✅ ${letter}` : letter;
         return `${prefix}\\. ${escapeMarkdown(opt.label)}`;
       })
       .join('\n');
@@ -42,7 +42,7 @@ export function buildDecisionView(
 
   if (decision.allowCustom) {
     lines.push('');
-    lines.push('_Custom answers allowed_');
+    lines.push('_✏️ Custom answers allowed_');
   }
 
   return lines.join('\n');
@@ -57,8 +57,9 @@ export function buildAnsweredView(
   answer: string,
   decisionIndex: number
 ): string {
+  const title = decision.title || decision.id;
   const lines: string[] = [
-    `✅ *${escapeMarkdown(decision.id)}* → \`${answer}\``,
+    `✅ *${escapeMarkdown(title)}* → \`${answer}\``,
     '',
   ];
 
@@ -67,7 +68,7 @@ export function buildAnsweredView(
   
   if (nextDecision) {
     const nextIndex = plan.decisions.indexOf(nextDecision);
-    lines.push(`_Moving to decision ${nextIndex + 1}\\.\\.\\._`);
+    lines.push(`_Next: ${nextIndex + 1}/${plan.frontmatter.total}\\.\\.\\._`);
   } else {
     lines.push('_All decisions complete\\!_');
   }
@@ -82,16 +83,18 @@ export function buildCompletionView(plan: DecisionFile): string {
   const { frontmatter, decisions } = plan;
   
   const lines: string[] = [
-    `✅ *${escapeMarkdown(frontmatter.title)} — Complete\\!*`,
+    `✅ *${escapeMarkdown(frontmatter.title)}*`,
     '',
-    '*Answers:*',
+    '*Summary:*',
   ];
 
-  for (const decision of decisions) {
-    if (decision.answer) {
-      lines.push(`• ${escapeMarkdown(decision.id)} → \`${decision.answer}\``);
+  for (let i = 0; i < decisions.length; i++) {
+    const decision = decisions[i];
+    const label = decision.title || decision.id;
+    if (decision.answer && decision.answer !== '__skipped__') {
+      lines.push(`${i + 1}\\. ${escapeMarkdown(label)} → \`${decision.answer}\``);
     } else {
-      lines.push(`• ${escapeMarkdown(decision.id)} → _\\(skipped\\)_`);
+      lines.push(`${i + 1}\\. ${escapeMarkdown(label)} → _skipped_`);
     }
   }
 
@@ -107,12 +110,11 @@ export function buildCompletionView(plan: DecisionFile): string {
  * Build custom input prompt view
  */
 export function buildCustomInputView(_plan: DecisionFile, decision: Decision): string {
+  const title = decision.title || decision.id;
   return [
-    `✏️ *Custom Answer for: ${escapeMarkdown(decision.id)}*`,
+    `✏️ *${escapeMarkdown(title)}*`,
     '',
-    'Reply with your custom answer\\.',
-    '',
-    '_Type your answer and send it as a message\\._',
+    '_Type your custom answer and send it\\._',
   ].join('\n');
 }
 
@@ -138,7 +140,7 @@ export function buildReviewSummaryView(plan: DecisionFile): string {
   const pendingCount = decisions.filter(d => !d.answer).length;
   
   const lines: string[] = [
-    `📋 *Review: ${escapeMarkdown(frontmatter.title)}*`,
+    `📋 *${escapeMarkdown(frontmatter.title)}*`,
     '',
     `_${answeredCount} answered${skippedCount > 0 ? `, ${skippedCount} skipped` : ''}${pendingCount > 0 ? `, ${pendingCount} pending` : ''}_`,
     '',
@@ -146,19 +148,20 @@ export function buildReviewSummaryView(plan: DecisionFile): string {
 
   for (let i = 0; i < decisions.length; i++) {
     const decision = decisions[i];
+    const label = decision.title || decision.id;
     const num = i + 1;
     
     if (decision.answer === '__skipped__') {
-      lines.push(`${num}\\. ${escapeMarkdown(decision.id)} → _\\(skipped\\)_`);
+      lines.push(`${num}\\. ${escapeMarkdown(label)} → _skipped_`);
     } else if (decision.answer) {
-      lines.push(`${num}\\. ${escapeMarkdown(decision.id)} → \`${decision.answer}\``);
+      lines.push(`${num}\\. ${escapeMarkdown(label)} → \`${decision.answer}\``);
     } else {
-      lines.push(`${num}\\. ${escapeMarkdown(decision.id)} → ⚠️ _unanswered_`);
+      lines.push(`${num}\\. ${escapeMarkdown(label)} → ⚠️`);
     }
   }
 
   lines.push('');
-  lines.push('_Tap a decision to change it, or submit when ready\\._');
+  lines.push('_Tap to edit, or submit\\._');
 
   return lines.join('\n');
 }

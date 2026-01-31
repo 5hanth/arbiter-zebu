@@ -39,6 +39,7 @@ export interface Option {
 
 export interface Decision {
   id: string;
+  title: string;
   status: Status;
   answer: string | null;
   answeredAt: string | null;

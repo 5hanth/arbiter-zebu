@@ -11,14 +11,20 @@ import type { DecisionFile, Decision, DecisionFileFrontmatter, Status } from '..
 function parseDecisionSection(section: string): Decision | null {
   const lines = section.trim().split('\n');
   
-  // Extract title from ## Decision N: Title
+  // Extract title from ## Decision N: ID — Title
   const titleMatch = lines[0]?.match(/^##\s+Decision\s+\d+:\s*(.+)$/i);
   if (!titleMatch) {
     return null;
   }
 
+  // Parse "ID — Title" or just "ID"
+  const fullTitle = titleMatch[1].trim();
+  const titleParts = fullTitle.split(/\s*[—–-]\s*/);
+  const extractedTitle = titleParts.length > 1 ? titleParts.slice(1).join(' — ') : '';
+
   const decision: Decision = {
     id: '',
+    title: extractedTitle,
     status: 'pending',
     answer: null,
     answeredAt: null,
