@@ -159,59 +159,111 @@ allow_custom: true
 
 ## Bot User Interface
 
+All views use Telegram's **MarkdownV2** parse mode. The bot launches with `dropPendingUpdates: true` to ignore stale callbacks from before restart.
+
 ### Queue View
 
+Shows all pending plans with priority stats and numbered buttons.
+
 ```
-📋 **Arbiter — Decision Queue**
+📋 *Arbiter — Decision Queue*
 
-🔴 1 urgent | 🟡 2 normal
+🔴 1 urgent │ 🟡 2 normal
 
-1. [nft-marketplace] API Design — 0/3
-2. [clean-it] i18n Approach — 2/5
+1. 🔴 [nft-marketplace] API Design Decisions — 0/3
+2. 🟡 [clean-it] i18n Approach — 2/5
 
-[1] [2] [Refresh 🔄]
+Buttons: [1] [2] [3] [4] [5]   (numeric, rows of 5)
+         [🔄 Refresh]
 ```
 
 ### Plan View
 
-```
-📄 **API Design Decisions**
-Tag: nft-marketplace | From: @ceo_zebu_bot
-Progress: ░░░░░░░░░░ 0/3
+Compact: title + priority + progress bar. No inline list of decisions — buttons handle navigation.
 
-[Start Review ▶️]
 ```
+📄 *API Design Decisions*
+
+🟡 normal │ ░░░░░░░░░░ 0/3
+
+_Context text if present (truncated to 300 chars)..._
+
+Buttons: [⬜ 1. Auth Strategy]        (one per row)
+         [⬜ 2. Database Choice]
+         [✅ 3. Caching]              (answered)
+         [⏭️ 4. Logging]              (skipped)
+         [▶️ Continue] [↩️ Back]
+```
+
+When all decisions are answered, `[📤 Submit]` appears instead of Continue.
 
 ### Decision View
 
-```
-🔸 **Decision 1/3: Auth Strategy**
+Header is `*1/3* · Title`, options show as lettered labels with `✓` for selected. Custom answers shown at bottom when present.
 
-How should we authenticate admin panel users?
-
-[JWT] [Session] [OAuth] [Custom ✏️] [Skip ⏭️]
 ```
+*1/3* · Auth Strategy
+
+How should we authenticate admin users?
+
+A. JWT tokens
+B. Sessions ✓
+C. OAuth
+
+_Custom: my-custom-answer_ ✓     (only if custom answer was given)
+
+_✏️ Custom answers allowed_       (only if allowCustom is true)
+
+Buttons: [⬅️ Prev] [1/3] [Next ➡️]     (navigation)
+         [A] [B] [C]                     (option letters, ✓ A if selected)
+         [✏️ Custom] [⏭️ Skip]
+         [↩️ Back to Plan]
+```
+
+- Option buttons show letter keys (A, B, C…) in rows of 3
+- Selected option shows `✓ A` on the button
+- **Custom answer button is always visible** on every decision
+- Navigation row shows prev/next with position indicator
 
 ### After Answer
 
 ```
-✅ **Auth Strategy → JWT**
+✅ *Auth Strategy* → `jwt`
 
-🔸 **Decision 2/3: Database**
-...
+_Next: 2/3..._
+```
+
+### Review Summary
+
+Compact: just counts + "Tap to edit, or submit" with titled decision buttons.
+
+```
+📋 *API Design Decisions*
+
+✅ 2 answered · ⏭️ 1 skipped
+
+_Tap to edit, or submit._
+
+Buttons: [1. ✓ Auth Strategy]         (one per row, navigates to decision)
+         [2. ✓ Database Choice]
+         [3. ⏭️ Caching]
+         [📤 Submit]
+         [↩️ Back]
 ```
 
 ### Completion
 
 ```
-✅ **API Design Decisions — Complete!**
+✅ *API Design Decisions*
 
-Answers:
-• Auth Strategy → JWT
-• Database → PostgreSQL
-• Caching → Redis
+*Summary:*
+1. Auth Strategy → `jwt`
+2. Database Choice → `postgresql`
+3. Caching → `redis`
 
-Notifying: @swe2_zebu_bot
+_Notifying: agent:swe2:main_
+
+Buttons: [📋 Back to Queue]
 ```
 
 ## Callback Data Format
