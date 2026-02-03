@@ -132,6 +132,14 @@ export async function startBot(bot: Telegraf): Promise<void> {
   process.once('SIGTERM', () => bot.stop('SIGTERM'));
 
   console.log('[Bot] Starting Arbiter Zebu...');
-  await bot.launch({ dropPendingUpdates: true });
+  
+  // launch() starts polling in the background — don't await it
+  // (it resolves when polling stops, not when it starts)
+  bot.launch({ dropPendingUpdates: true }).catch(err => {
+    console.error('[Bot] Launch error:', err.message);
+    // Will auto-restart via systemd
+    process.exit(1);
+  });
+  
   console.log('[Bot] ✅ Bot is running!');
 }

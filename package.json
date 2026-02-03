@@ -1,6 +1,6 @@
 {
   "name": "arbiter-zebu",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "description": "Standalone Telegram bot for async human-in-the-loop decision making",
   "type": "module",
   "main": "dist/index.js",
