@@ -41,8 +41,10 @@ export class QueueWatcher extends EventEmitter {
     this.watcher = watch(this.watchDir, {
       persistent: true,
       ignoreInitial: false, // Emit 'add' events for existing files on startup
+      usePolling: true, // Polling is more reliable across install methods
+      interval: 1000, // Check every second
       awaitWriteFinish: {
-        stabilityThreshold: 200,
+        stabilityThreshold: 300,
         pollInterval: 100,
       },
       ignored: [
