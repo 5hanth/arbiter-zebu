@@ -1,10 +1,10 @@
 /**
- * Queue Watcher - Monitor queue directory for changes
+ * Queue Watcher - Monitor queue directory for changes using native fs
  */
 
-import { watch, type FSWatcher } from 'chokidar';
+import { watch, readdirSync, statSync } from 'fs';
 import { EventEmitter } from 'events';
-import { basename } from 'path';
+import { join } from 'path';
 
 export type WatcherEvent = 'plan:added' | 'plan:updated' | 'plan:removed';
 
@@ -15,11 +15,13 @@ export interface WatcherEventPayload {
 }
 
 /**
- * Queue directory watcher using chokidar
+ * Queue directory watcher using fs.watch + polling fallback
  */
 export class QueueWatcher extends EventEmitter {
-  private watcher: FSWatcher | null = null;
   private watchDir: string;
+  private knownFiles: Map<string, number> = new Map(); // filename -> mtime
+  private pollInterval: ReturnType<typeof setInterval> | null = null;
+  private fsWatcher: ReturnType<typeof watch> | null = null;
   private isReady = false;
 
   constructor(watchDir: string) {
@@ -31,54 +33,43 @@ export class QueueWatcher extends EventEmitter {
    * Start watching the queue directory
    */
   async start(): Promise<void> {
-    if (this.watcher) {
-      return;
+    // Initial scan
+    this.scanDirectory();
+
+    // Try native fs.watch for instant detection
+    try {
+      this.fsWatcher = watch(this.watchDir, (_eventType, filename) => {
+        if (filename && filename.endsWith('.md')) {
+          // Debounce: wait briefly for writes to finish
+          setTimeout(() => this.scanDirectory(), 300);
+        }
+      });
+    } catch {
+      console.log('[Watcher] fs.watch unavailable, using polling only');
     }
 
-    // Watch the directory itself, not a glob pattern
-    // Glob patterns like `dir/**/*.md` can miss files in the root directory
-    
-    this.watcher = watch(this.watchDir, {
-      persistent: true,
-      ignoreInitial: false, // Emit 'add' events for existing files on startup
-      usePolling: true, // Polling is more reliable across install methods
-      interval: 1000, // Check every second
-      awaitWriteFinish: {
-        stabilityThreshold: 300,
-        pollInterval: 100,
-      },
-      ignored: [
-        /(^|[\/\\])\../, // Ignore dotfiles (including .tmp-* files)
-        /\.tmp-/, // Explicitly ignore temp files
-      ],
-      depth: 1, // Only watch immediate children (plans are not nested)
-    });
+    // Also poll every 2 seconds as a reliable fallback
+    this.pollInterval = setInterval(() => this.scanDirectory(), 2000);
 
-    this.watcher
-      .on('add', (filePath) => this.handleAdd(filePath))
-      .on('change', (filePath) => this.handleChange(filePath))
-      .on('unlink', (filePath) => this.handleRemove(filePath))
-      .on('ready', () => {
-        this.isReady = true;
-        this.emit('ready');
-        console.log('[Watcher] Ready, watching:', this.watchDir);
-      })
-      .on('error', (err) => {
-        console.error('[Watcher] Error:', err);
-        this.emit('error', err);
-      });
+    this.isReady = true;
+    this.emit('ready');
+    console.log('[Watcher] Ready, watching:', this.watchDir);
   }
 
   /**
    * Stop watching
    */
   async stop(): Promise<void> {
-    if (this.watcher) {
-      await this.watcher.close();
-      this.watcher = null;
-      this.isReady = false;
-      console.log('[Watcher] Stopped');
+    if (this.pollInterval) {
+      clearInterval(this.pollInterval);
+      this.pollInterval = null;
     }
+    if (this.fsWatcher) {
+      this.fsWatcher.close();
+      this.fsWatcher = null;
+    }
+    this.isReady = false;
+    console.log('[Watcher] Stopped');
   }
 
   /**
@@ -88,48 +79,78 @@ export class QueueWatcher extends EventEmitter {
     return this.isReady;
   }
 
-  private handleAdd(filePath: string): void {
-    if (!this.isValidMdFile(filePath)) return;
+  /**
+   * Scan directory and emit events for changes
+   */
+  private scanDirectory(): void {
+    let currentFiles: Map<string, number>;
     
-    const payload: WatcherEventPayload = {
-      event: 'plan:added',
-      filePath,
-      fileName: basename(filePath),
-    };
-    
-    console.log('[Watcher] Plan added:', basename(filePath));
-    this.emit('plan:added', payload);
-    this.emit('change', payload);
+    try {
+      const entries = readdirSync(this.watchDir);
+      currentFiles = new Map();
+      
+      for (const entry of entries) {
+        if (!this.isValidMdFile(entry)) continue;
+        
+        const filePath = join(this.watchDir, entry);
+        try {
+          const stat = statSync(filePath);
+          currentFiles.set(entry, stat.mtimeMs);
+        } catch {
+          // File might have been deleted between readdir and stat
+          continue;
+        }
+      }
+    } catch {
+      return; // Directory might not exist yet
+    }
+
+    // Check for new or updated files
+    for (const [fileName, mtime] of currentFiles) {
+      const filePath = join(this.watchDir, fileName);
+      const knownMtime = this.knownFiles.get(fileName);
+      
+      if (knownMtime === undefined) {
+        // New file
+        const payload: WatcherEventPayload = {
+          event: 'plan:added',
+          filePath,
+          fileName,
+        };
+        console.log('[Watcher] Plan added:', fileName);
+        this.emit('plan:added', payload);
+        this.emit('change', payload);
+      } else if (mtime !== knownMtime) {
+        // Updated file
+        const payload: WatcherEventPayload = {
+          event: 'plan:updated',
+          filePath,
+          fileName,
+        };
+        this.emit('plan:updated', payload);
+        this.emit('change', payload);
+      }
+    }
+
+    // Check for removed files
+    for (const [fileName] of this.knownFiles) {
+      if (!currentFiles.has(fileName)) {
+        const filePath = join(this.watchDir, fileName);
+        const payload: WatcherEventPayload = {
+          event: 'plan:removed',
+          filePath,
+          fileName,
+        };
+        this.emit('plan:removed', payload);
+        this.emit('change', payload);
+      }
+    }
+
+    // Update known files
+    this.knownFiles = currentFiles;
   }
 
-  private handleChange(filePath: string): void {
-    if (!this.isValidMdFile(filePath)) return;
-    
-    const payload: WatcherEventPayload = {
-      event: 'plan:updated',
-      filePath,
-      fileName: basename(filePath),
-    };
-    
-    this.emit('plan:updated', payload);
-    this.emit('change', payload);
-  }
-
-  private handleRemove(filePath: string): void {
-    if (!this.isValidMdFile(filePath)) return;
-    
-    const payload: WatcherEventPayload = {
-      event: 'plan:removed',
-      filePath,
-      fileName: basename(filePath),
-    };
-    
-    this.emit('plan:removed', payload);
-    this.emit('change', payload);
-  }
-
-  private isValidMdFile(filePath: string): boolean {
-    const fileName = basename(filePath);
+  private isValidMdFile(fileName: string): boolean {
     return (
       fileName.endsWith('.md') &&
       !fileName.startsWith('.') &&
