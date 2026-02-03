@@ -4,67 +4,37 @@ Standalone Telegram bot for async human-in-the-loop decision making. Zero LLM co
 
 ## Quick Start
 
-**Run instantly:**
 ```bash
-bunx arbiter-zebu
-```
-
-**Or install globally:**
-```bash
+# Install
 bun add -g arbiter-zebu
-arbiter-zebu
+
+# Interactive setup (creates config + starts as service)
+arbiter-zebu setup
 ```
 
-**Or clone and build:**
-```bash
-git clone https://github.com/5hanth/arbiter-zebu.git
-cd arbiter-zebu
-npm install && npm run build
-npm start
-```
+That's it. The setup wizard will:
+1. Ask for your **bot token** (from [@BotFather](https://t.me/BotFather))
+2. Ask for your **Telegram user ID** (from [@userinfobot](https://t.me/userinfobot))
+3. Create `~/.arbiter/config.json`
+4. Install and start a **systemd service**
 
-### Configuration
+Send `/queue` to your bot in Telegram to verify.
 
-Create `~/.arbiter/config.json`:
-```json
-{
-  "telegram": {
-    "token": "YOUR_BOT_TOKEN",
-    "allowedUsers": [YOUR_TELEGRAM_USER_ID]
-  },
-  "queue": {
-    "dir": "~/.arbiter/queue"
-  }
-}
-```
-
-Get your bot token from [@BotFather](https://t.me/BotFather). Get your user ID from [@userinfobot](https://t.me/userinfobot).
-
-### Run as a service (systemd)
+## Commands
 
 ```bash
-mkdir -p ~/.config/systemd/user
+arbiter-zebu          # Start the bot
+arbiter-zebu setup    # Interactive setup (config + systemd service)
+arbiter-zebu help     # Show help
+```
 
-cat > ~/.config/systemd/user/arbiter.service << EOF
-[Unit]
-Description=Arbiter Zebu Bot
-After=network.target
+## Service Management
 
-[Service]
-Type=simple
-WorkingDirectory=$(pwd)
-ExecStart=$(which node) dist/index.js
-StandardOutput=append:/tmp/arbiter.log
-StandardError=append:/tmp/arbiter.log
-Restart=on-failure
-RestartSec=10
-
-[Install]
-WantedBy=default.target
-EOF
-
-systemctl --user daemon-reload
-systemctl --user enable --now arbiter
+```bash
+systemctl --user status arbiter     # Check status
+systemctl --user stop arbiter       # Stop
+systemctl --user restart arbiter    # Restart
+tail -f /tmp/arbiter.log            # View logs
 ```
 
 ## Features
@@ -99,13 +69,14 @@ Agents push decisions → ~/.arbiter/queue/pending/
 Use the [arbiter-skill](https://github.com/5hanth/arbiter-skill) to push decisions from AI agents:
 
 ```bash
-# Install the skill
+# Install the skill (for Clawdbot/OpenClaw)
 clawhub install arbiter
-# or
+
+# Or install standalone CLI
 bun add -g arbiter-skill
 
 # Push decisions
-arbiter-push '{"title":"API Design","tag":"my-project","notify":"agent:swe1:main","decisions":[{"id":"auth","title":"Auth Method","context":"How to authenticate users","options":[{"key":"jwt","label":"JWT tokens"},{"key":"session","label":"Server sessions"}]}]}'
+arbiter-push '{"title":"API Design","decisions":[{"id":"auth","title":"Auth Method","context":"How to authenticate","options":[{"key":"jwt","label":"JWT"},{"key":"session","label":"Sessions"}]}]}'
 ```
 
 ## Documentation
