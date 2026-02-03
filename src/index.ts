@@ -86,7 +86,8 @@ ExecStart=${execPath}
 StandardOutput=append:/tmp/arbiter.log
 StandardError=append:/tmp/arbiter.log
 Restart=on-failure
-RestartSec=10
+RestartSec=5
+TimeoutStopSec=5
 
 [Install]
 WantedBy=default.target
@@ -154,16 +155,23 @@ Docs: https://github.com/5hanth/arbiter-zebu
   const bot = createBot(config, queueManager);
   await startBot(bot);
 
-  // Handle shutdown
-  const shutdown = async () => {
-    console.log('\n[Shutdown] Stopping...');
-    await queueManager.stop();
-    console.log('[Shutdown] Queue manager stopped');
+  // Handle shutdown — force exit after 3s if graceful fails
+  const shutdown = async (signal: string) => {
+    console.log(`\n[Shutdown] ${signal} received, stopping...`);
+    const forceExit = setTimeout(() => {
+      console.log('[Shutdown] Force exit');
+      process.exit(0);
+    }, 3000);
+    try {
+      await queueManager.stop();
+      console.log('[Shutdown] Queue manager stopped');
+    } catch {}
+    clearTimeout(forceExit);
     process.exit(0);
   };
 
-  process.on('SIGINT', shutdown);
-  process.on('SIGTERM', shutdown);
+  process.on('SIGINT', () => shutdown('SIGINT'));
+  process.on('SIGTERM', () => shutdown('SIGTERM'));
 }
 
 main().catch((err) => {
