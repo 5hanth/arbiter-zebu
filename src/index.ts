@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 /**
  * Arbiter Zebu - Main entry point
  * 

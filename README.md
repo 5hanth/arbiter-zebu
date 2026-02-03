@@ -1,90 +1,118 @@
 # Arbiter Zebu
 
-Standalone Telegram bot for async human-in-the-loop decision making.
-
-## What is this?
-
-Arbiter Zebu enables AI agents to push batched decisions for human review. Humans answer via Telegram buttons **without triggering LLM processing** — saving costs and enabling efficient batch reviews.
-
-## Features
-
-- 📋 **Queue-based decisions** — MD files in a directory
-- 🔘 **Button-based UI** — No typing, just tap
-- 💰 **Zero LLM cost** — Callbacks handled directly
-- 📁 **Persistent state** — Survives restarts
-- 🔔 **Agent notifications** — File-based notification system
-- 📝 **Audit trail** — All decisions logged
+Standalone Telegram bot for async human-in-the-loop decision making. Zero LLM cost — button taps are handled directly.
 
 ## Quick Start
 
+**Run instantly with npx:**
 ```bash
-# Install dependencies
-npm install
+npx arbiter-zebu
+```
 
-# Build TypeScript
-npm run build
+**Or install globally:**
+```bash
+npm i -g arbiter-zebu
+arbiter-zebu
+```
 
-# Configure
-cp config.example.json ~/.arbiter/config.json
-# Edit config.json with your bot token and allowed user IDs
-
-# Run
+**Or clone and build:**
+```bash
+git clone https://github.com/5hanth/arbiter-zebu.git
+cd arbiter-zebu
+npm install && npm run build
 npm start
 ```
 
-### Build
+### Configuration
 
-The project is written in TypeScript and must be compiled before running:
-
-```bash
-npm run build        # one-time compile (tsc)
-npm run dev          # watch mode for development
+Create `~/.arbiter/config.json`:
+```json
+{
+  "telegram": {
+    "token": "YOUR_BOT_TOKEN",
+    "allowedUsers": [YOUR_TELEGRAM_USER_ID]
+  },
+  "queue": {
+    "dir": "~/.arbiter/queue"
+  }
+}
 ```
 
-Output goes to `dist/`.
+Get your bot token from [@BotFather](https://t.me/BotFather). Get your user ID from [@userinfobot](https://t.me/userinfobot).
 
-### systemd User Service
-
-To run as a persistent service:
+### Run as a service (systemd)
 
 ```bash
 mkdir -p ~/.config/systemd/user
-cat > ~/.config/systemd/user/arbiter.service << 'EOF'
+
+cat > ~/.config/systemd/user/arbiter.service << EOF
 [Unit]
-Description=Arbiter Zebu Telegram Bot
+Description=Arbiter Zebu Bot
 After=network.target
 
 [Service]
 Type=simple
-WorkingDirectory=%h/repos/arbiter-zebu
-ExecStart=/usr/bin/node dist/index.js
+WorkingDirectory=$(pwd)
+ExecStart=$(which node) dist/index.js
+StandardOutput=append:/tmp/arbiter.log
+StandardError=append:/tmp/arbiter.log
 Restart=on-failure
-RestartSec=5
-Environment=NODE_ENV=production
+RestartSec=10
 
 [Install]
 WantedBy=default.target
 EOF
 
 systemctl --user daemon-reload
-systemctl --user enable --now arbiter.service
+systemctl --user enable --now arbiter
 ```
 
-Check logs: `journalctl --user -u arbiter.service -f`
+## Features
+
+- 📋 **Queue-based decisions** — MD files in a watched directory
+- 🔘 **Button-based UI** — Tap to answer, no typing needed
+- 💰 **Zero LLM cost** — Callbacks handled directly by the bot
+- 📁 **Persistent state** — File-based, survives restarts
+- 🔔 **Agent notifications** — Notify sessions when decisions are complete
+- ✏️ **Custom answers** — Not limited to predefined options
+- 📝 **Audit trail** — All decisions logged in markdown
+
+## How It Works
+
+```
+Agents push decisions → ~/.arbiter/queue/pending/
+                              ↓
+              Arbiter bot watches directory
+                              ↓
+              Shows decisions in Telegram with buttons
+                              ↓
+              Human answers by tapping
+                              ↓
+              Answers written back to markdown
+                              ↓
+              Completed plans → ~/.arbiter/queue/completed/
+              Notifications  → ~/.arbiter/queue/notify/
+```
+
+## Agent Integration
+
+Use the [arbiter-skill](https://github.com/5hanth/arbiter-skill) to push decisions from AI agents:
+
+```bash
+# Install the skill
+clawhub install arbiter
+# or
+npm i -g arbiter-skill
+
+# Push decisions
+arbiter-push '{"title":"API Design","tag":"my-project","notify":"agent:swe1:main","decisions":[{"id":"auth","title":"Auth Method","context":"How to authenticate users","options":[{"key":"jwt","label":"JWT tokens"},{"key":"session","label":"Server sessions"}]}]}'
+```
 
 ## Documentation
 
-- [Architecture](./ARCHITECTURE.md) — System design
-- [Execution Plan](./PLAN.md) — Development phases
-
-## Usage with Clawdbot
-
-Use the [arbiter-skill](https://github.com/5hanth/arbiter-skill) to push decisions from agents:
-
-```bash
-arbiter-push '{"title":"API Decisions","decisions":[...]}'
-```
+- [Architecture](./ARCHITECTURE.md) — System design and file formats
+- [arbiter-skill](https://github.com/5hanth/arbiter-skill) — Agent-side CLI
 
 ## License
 
-Private — All rights reserved
+MIT
