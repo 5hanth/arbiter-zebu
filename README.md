@@ -4,14 +4,14 @@ Standalone Telegram bot for async human-in-the-loop decision making. Zero LLM co
 
 ## Quick Start
 
-**Run instantly with npx:**
+**Run instantly:**
 ```bash
-npx arbiter-zebu
+bunx arbiter-zebu
 ```
 
 **Or install globally:**
 ```bash
-npm i -g arbiter-zebu
+bun add -g arbiter-zebu
 arbiter-zebu
 ```
 
@@ -102,7 +102,7 @@ Use the [arbiter-skill](https://github.com/5hanth/arbiter-skill) to push decisio
 # Install the skill
 clawhub install arbiter
 # or
-npm i -g arbiter-skill
+bun add -g arbiter-skill
 
 # Push decisions
 arbiter-push '{"title":"API Design","tag":"my-project","notify":"agent:swe1:main","decisions":[{"id":"auth","title":"Auth Method","context":"How to authenticate users","options":[{"key":"jwt","label":"JWT tokens"},{"key":"session","label":"Server sessions"}]}]}'
